@@ -17,7 +17,13 @@ const TIPS = [
   'Nunca compartilhe sua senha com outras pessoas',
 ];
 
-export default function ProfileScreen({ onBack, user }) {
+const MOCK_ANUNCIOS = [
+  { id: 1, name: 'Macacão Azul 3-6m', category: 'Roupas', condition: 'Ótimo estado', status: 'Ativo' },
+  { id: 2, name: 'Carrinho de Bebê', category: 'Acessórios', condition: 'Bom estado', status: 'Ativo' },
+  { id: 3, name: 'Berço de Madeira', category: 'Móveis', condition: 'Usado', status: 'Encerrado' },
+];
+
+export default function ProfileScreen({ onBack, user, onProductPress }) {
   const { theme, toggleTheme } = useTheme();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -166,6 +172,34 @@ export default function ProfileScreen({ onBack, user }) {
           </TouchableOpacity>
         </View>
 
+        {/* Card meus anúncios */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Meus Anúncios</Text>
+          {MOCK_ANUNCIOS.length === 0 ? (
+            <View style={s.emptyAds}>
+              <Text style={s.emptyAdsIcon}>📦</Text>
+              <Text style={s.emptyAdsText}>Você ainda não fez nenhuma doação.</Text>
+            </View>
+          ) : (
+            MOCK_ANUNCIOS.map((ad) => (
+              <TouchableOpacity key={ad.id} style={s.adCard} onPress={() => onProductPress?.(ad)} activeOpacity={0.7}>
+                <View style={s.adImageBox}>
+                  <Text style={s.adImageEmoji}>🎁</Text>
+                </View>
+                <View style={s.adInfo}>
+                  <Text style={s.adName} numberOfLines={1}>{ad.name}</Text>
+                  <Text style={s.adMeta}>{ad.category} · {ad.condition}</Text>
+                  <View style={[s.adStatusBadge, ad.status === 'Ativo' ? s.adStatusActive : s.adStatusClosed]}>
+                    <Text style={[s.adStatusText, { color: ad.status === 'Ativo' ? '#3aaa6e' : '#999' }]}>
+                      {ad.status === 'Ativo' ? '● Ativo' : '● Encerrado'}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))
+          )}
+        </View>
+
         {/* Card dicas de segurança */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Dicas de Segurança</Text>
@@ -251,6 +285,28 @@ const styles = (theme) => StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+
+  // Anúncios
+  emptyAds: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+  emptyAdsIcon: { fontSize: 36 },
+  emptyAdsText: { fontSize: 13, color: theme.textMuted },
+  adCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border,
+  },
+  adImageBox: {
+    width: 52, height: 52, borderRadius: 12,
+    backgroundColor: theme.pinkLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  adImageEmoji: { fontSize: 24 },
+  adInfo: { flex: 1, gap: 3 },
+  adName: { fontSize: 14, fontWeight: '700', color: theme.text },
+  adMeta: { fontSize: 12, color: theme.textMuted },
+  adStatusBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
+  adStatusActive: { backgroundColor: 'rgba(58,170,110,0.12)' },
+  adStatusClosed: { backgroundColor: 'rgba(150,150,150,0.12)' },
+  adStatusText: { fontSize: 11, fontWeight: '600' },
 
   // Dicas
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },

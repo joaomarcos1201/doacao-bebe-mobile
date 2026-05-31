@@ -86,17 +86,6 @@ export default function DonationScreen({ onBack }) {
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Navbar */}
-      <View style={s.navbar}>
-        <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-          <Text style={s.backBtn}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={s.navTitle}>Doar Produto</Text>
-        <TouchableOpacity onPress={toggleTheme} activeOpacity={0.7}>
-          <Text style={s.themeBtn}>{theme.isDark ? '☀️' : '🌙'}</Text>
-        </TouchableOpacity>
-      </View>
-
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Card formulário */}
         <View style={s.card}>

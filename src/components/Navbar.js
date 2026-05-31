@@ -1,24 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Animated, Modal, FlatList, Pressable,
+  View, Text, TextInput, TouchableOpacity, StyleSheet, Animated,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
 const PLACEHOLDERS = ['Buscar Roupas...', 'Buscar Brinquedos...', 'Buscar Acessórios...'];
-const ESTADOS = [
-  'Todo Brasil','AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS',
-  'MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
-];
 
-export default function Navbar({ user, onLogin, onLogout, onMenuOpen }) {
+export default function Navbar({ user, onLogin, onLogout, onSearch }) {
   const { theme, toggleTheme } = useTheme();
   const [phIndex, setPhIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const [search, setSearch] = useState('');
   const [focused, setFocused] = useState(false);
-  const [stateDropdown, setStateDropdown] = useState(false);
-  const [selectedState, setSelectedState] = useState('Todo Brasil');
   const [history] = useState(['Roupas bebê', 'Carrinho', 'Berço']);
 
   useEffect(() => {
@@ -35,11 +28,8 @@ export default function Navbar({ user, onLogin, onLogout, onMenuOpen }) {
 
   return (
     <View style={s.navbar}>
-      {/* Linha do logo e ações */}
+      {/* Logo e ações */}
       <View style={s.topRow}>
-        <TouchableOpacity onPress={onMenuOpen} style={s.iconBtn}>
-          <Text style={s.iconBtnText}>☰</Text>
-        </TouchableOpacity>
         <View style={s.logoRow}>
           <View style={s.logoCircle}>
             <Text style={s.logoEmoji}>🌸</Text>
@@ -65,55 +55,32 @@ export default function Navbar({ user, onLogin, onLogout, onMenuOpen }) {
         </View>
       </View>
 
-      {/* Barra de busca */}
-      <View style={s.searchRow}>
-        <TouchableOpacity onPress={() => setStateDropdown(true)} style={s.stateBtn}>
-          <Text style={s.stateBtnText}>{selectedState} ▾</Text>
-        </TouchableOpacity>
-        <View style={s.inputWrap}>
-          <TextInput
-            style={s.input}
-            value={search}
-            onChangeText={setSearch}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setTimeout(() => setFocused(false), 200)}
-            placeholderTextColor="transparent"
-          />
-          {!search && (
-            <Animated.Text style={[s.placeholder, { opacity: fadeAnim }]} pointerEvents="none">
-              {PLACEHOLDERS[phIndex]}
-            </Animated.Text>
-          )}
-          {focused && history.length > 0 && (
-            <View style={[s.historyDropdown, { backgroundColor: theme.card, borderColor: theme.border }]}>
-              {history.map((h, i) => (
-                <TouchableOpacity key={i} onPress={() => { setSearch(h); setFocused(false); }} style={s.historyItem}>
-                  <Text style={{ color: theme.textMuted, fontSize: 13 }}>🕐  {h}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-        </View>
-        <TouchableOpacity style={s.searchBtn}>
-          <Text style={{ fontSize: 16 }}>🔍</Text>
-        </TouchableOpacity>
-      </View>
-
-      <Modal visible={stateDropdown} transparent animationType="fade">
-        <Pressable style={s.overlay} onPress={() => setStateDropdown(false)}>
-          <View style={[s.stateList, { backgroundColor: theme.card }]}>
-            <FlatList
-              data={ESTADOS}
-              keyExtractor={i => i}
-              renderItem={({ item }) => (
-                <TouchableOpacity style={s.stateItem} onPress={() => { setSelectedState(item); setStateDropdown(false); }}>
-                  <Text style={{ color: theme.text, fontSize: 14 }}>{item}</Text>
-                </TouchableOpacity>
-              )}
-            />
+      {/* Barra de busca com lupa interna */}
+      <View style={s.inputWrap}>
+        <Text style={s.inputIcon}>🔍</Text>
+        <TextInput
+          style={s.input}
+          value={search}
+          onChangeText={setSearch}
+          onFocus={() => { setFocused(true); onSearch?.(''); }}
+          onBlur={() => setTimeout(() => setFocused(false), 200)}
+          placeholderTextColor="transparent"
+        />
+        {!search && (
+          <Animated.Text style={[s.placeholder, { opacity: fadeAnim }]} pointerEvents="none">
+            {PLACEHOLDERS[phIndex]}
+          </Animated.Text>
+        )}
+        {focused && history.length > 0 && (
+          <View style={[s.historyDropdown, { backgroundColor: theme.card, borderColor: theme.border }]}>
+            {history.map((h, i) => (
+              <TouchableOpacity key={i} onPress={() => { onSearch?.(h); setFocused(false); }} style={s.historyItem}>
+                <Text style={{ color: theme.textMuted, fontSize: 13 }}>🕐  {h}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
-        </Pressable>
-      </Modal>
+        )}
+      </View>
     </View>
   );
 }
@@ -144,31 +111,18 @@ const styles = (theme) => StyleSheet.create({
   helloText: { color: theme.text, fontSize: 12 },
   authBtn: { paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20 },
   authBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' },
-  searchRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  stateBtn: {
-    backgroundColor: theme.pinkLight, borderRadius: 10,
-    paddingHorizontal: 10, paddingVertical: 8,
-    borderWidth: 1, borderColor: theme.border,
-  },
-  stateBtnText: { color: theme.pink, fontSize: 11, fontWeight: '600' },
-  inputWrap: { flex: 1, position: 'relative', justifyContent: 'center' },
+  inputWrap: { position: 'relative', justifyContent: 'center' },
+  inputIcon: { position: 'absolute', left: 12, fontSize: 14, zIndex: 1 },
   input: {
     backgroundColor: theme.bgSecondary, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8,
+    paddingHorizontal: 36, paddingVertical: 8,
     borderWidth: 1, borderColor: theme.border,
     color: theme.text, fontSize: 13,
   },
-  placeholder: { position: 'absolute', left: 12, color: theme.textMuted, fontSize: 13 },
-  searchBtn: {
-    backgroundColor: theme.pink, borderRadius: 10,
-    paddingHorizontal: 12, paddingVertical: 8,
-  },
+  placeholder: { position: 'absolute', left: 36, color: theme.textMuted, fontSize: 13 },
   historyDropdown: {
     position: 'absolute', top: 40, left: 0, right: 0,
     borderRadius: 10, borderWidth: 1, zIndex: 999, elevation: 10,
   },
   historyItem: { paddingHorizontal: 12, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center' },
-  stateList: { width: 220, maxHeight: 320, borderRadius: 14, padding: 8 },
-  stateItem: { paddingHorizontal: 12, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border },
 });

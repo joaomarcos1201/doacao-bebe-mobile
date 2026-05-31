@@ -9,13 +9,13 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
 const CATEGORIES = [
-  { label: 'Todos', icon: '⊞' },
-  { label: 'Roupas', icon: '👕' },
-  { label: 'Brinquedos', icon: '🧸' },
-  { label: 'Móveis', icon: '🛏' },
-  { label: 'Acessórios', icon: '🍼' },
-  { label: 'Alimentação', icon: '🥣' },
-  { label: 'Outros', icon: '···' },
+  { label: 'Todos' },
+  { label: 'Roupas' },
+  { label: 'Brinquedos' },
+  { label: 'Móveis' },
+  { label: 'Acessórios' },
+  { label: 'Alimentação' },
+  { label: 'Outros' },
 ];
 
 const HOW_IT_WORKS = [
@@ -51,7 +51,7 @@ export default function HomeScreen({ onDonate }) {
         <View style={s.heroCircle2} />
         <View style={s.heroLeft}>
           <View style={s.badge}>
-            <Text style={s.badgeText}>🌸 DOAÇÕES PARA BEBÊS</Text>
+            <Text style={s.badgeText}>DOAÇÕES PARA BEBÊS</Text>
           </View>
           <Text style={s.heroTitle}>
             Conectando quem doa com{' '}
@@ -61,7 +61,7 @@ export default function HomeScreen({ onDonate }) {
             Itens gratuitos de famílias da sua região.
           </Text>
           <TouchableOpacity style={s.heroBtn} activeOpacity={0.8} onPress={onDonate}>
-            <Text style={s.heroBtnText}>❤️  Quero doar</Text>
+            <Text style={s.heroBtnText}>Quero doar</Text>
           </TouchableOpacity>
           <View style={s.features}>
             {['Gratuito', 'Seguro', 'Solidário'].map((f, i) => (
@@ -71,9 +71,7 @@ export default function HomeScreen({ onDonate }) {
             ))}
           </View>
         </View>
-        <View style={s.heroRight}>
-          <Text style={s.heroEmoji}>👶</Text>
-        </View>
+        <View style={s.heroRight} />
       </View>
 
       {/* Categorias */}
@@ -90,7 +88,6 @@ export default function HomeScreen({ onDonate }) {
             onPress={() => setActiveCategory(cat.label)}
             activeOpacity={0.7}
           >
-            <Text style={s.catIcon}>{cat.icon}</Text>
             <Text style={[s.catLabel, activeCategory === cat.label && s.catLabelActive]}>
               {cat.label}
             </Text>
@@ -98,27 +95,7 @@ export default function HomeScreen({ onDonate }) {
         ))}
       </ScrollView>
 
-      {/* Como funciona — scroll horizontal */}
-      <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Como funciona</Text>
-        <Text style={s.sectionSubtitle}>Simples e cheio de amor</Text>
-      </View>
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.howContent}
-      >
-        {HOW_IT_WORKS.map((item) => (
-          <View key={item.num} style={s.howCard}>
-            <View style={s.howNum}>
-              <Text style={s.howNumText}>{item.num}</Text>
-            </View>
-            <Text style={s.howIcon}>{item.icon}</Text>
-            <Text style={s.howTitle}>{item.title}</Text>
-            <Text style={s.howDesc}>{item.desc}</Text>
-          </View>
-        ))}
-      </ScrollView>
+
 
       {/* Grid de produtos 2 colunas */}
       <View style={s.sectionHeader}>
@@ -128,16 +105,13 @@ export default function HomeScreen({ onDonate }) {
 
       {filtered.length === 0 ? (
         <View style={s.empty}>
-          <Text style={s.emptyIcon}>🔍</Text>
           <Text style={s.emptyText}>Nenhum item nessa categoria.</Text>
         </View>
       ) : (
         <View style={s.productsGrid}>
           {filtered.map((product, index) => (
             <View key={product.id} style={[s.productCard, index % 2 === 0 ? { marginRight: 8 } : { marginLeft: 8 }]}>
-              <View style={s.productImage}>
-                <Text style={s.productImageEmoji}>🎁</Text>
-              </View>
+              <View style={s.productImage} />
               <View style={s.productInfo}>
                 <View style={s.productBadges}>
                   <View style={s.productBadge}>
@@ -155,15 +129,7 @@ export default function HomeScreen({ onDonate }) {
         </View>
       )}
 
-      {/* Footer */}
-      <View style={s.footer}>
-        <Text style={s.footerText}>© 2024 Além do Positivo</Text>
-        <View style={s.footerLinks}>
-          <TouchableOpacity><Text style={s.footerLink}>Termos de Privacidade</Text></TouchableOpacity>
-          <Text style={s.footerSep}>·</Text>
-          <TouchableOpacity><Text style={s.footerLink}>Manual de Segurança</Text></TouchableOpacity>
-        </View>
-      </View>
+
     </ScrollView>
   );
 }

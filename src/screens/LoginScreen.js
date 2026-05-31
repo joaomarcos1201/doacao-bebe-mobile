@@ -32,9 +32,7 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
 
         <View style={s.card}>
           {/* Logo */}
-          <View style={s.logoCircle}>
-            <Text style={s.logoEmoji}>🌸</Text>
-          </View>
+          <View style={s.logoCircle} />
           <Text style={s.title}>Além do Positivo</Text>
           <Text style={s.subtitle}>Faça login para continuar</Text>
 
