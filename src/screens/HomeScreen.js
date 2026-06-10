@@ -1,274 +1,118 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Dimensions, FlatList,
+  View, Text, TouchableOpacity, StyleSheet, ScrollView, Image,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = (width - 48) / 2;
-
-const CATEGORIES = [
-  { label: 'Todos' },
-  { label: 'Roupas' },
-  { label: 'Brinquedos' },
-  { label: 'Móveis' },
-  { label: 'Acessórios' },
-  { label: 'Alimentação' },
-  { label: 'Outros' },
+const CARDS = [
+  {
+    key: 'chat',
+    title: 'Chat',
+    description: 'Converse com doadores e receptores diretamente pelo app.',
+    icon: '💬',
+  },
+  {
+    key: 'donation',
+    title: 'Anunciar',
+    description: 'Doe itens que seu bebê não usa mais para famílias que precisam.',
+    icon: '🎁',
+  },
+  {
+    key: 'profile',
+    title: 'Meu Perfil',
+    description: 'Gerencie seus dados, senha e seus anúncios publicados.',
+    icon: '👤',
+  },
+  {
+    key: 'about',
+    title: 'Sobre Nós',
+    description: 'Conheça a história e os valores do Além do Positivo.',
+    icon: 'ℹ️',
+  },
 ];
 
-const HOW_IT_WORKS = [
-  { num: '1', icon: '📦', title: 'Doe itens', desc: 'Cadastre produtos que seu bebê não usa mais.' },
-  { num: '2', icon: '👨‍👩‍👧', title: 'Encontre famílias', desc: 'Conecte-se com famílias da sua região.' },
-  { num: '3', icon: '💝', title: 'Ajude quem precisa', desc: 'Faça a diferença com um gesto de amor.' },
-];
-
-const MOCK_PRODUCTS = [
-  { id: 1, name: 'Macacão Azul 3-6m', category: 'Roupas', condition: 'Ótimo estado', desc: 'Macacão de algodão, lavado e higienizado.' },
-  { id: 2, name: 'Carrinho de Bebê', category: 'Acessórios', condition: 'Bom estado', desc: 'Carrinho dobrável com alça ajustável.' },
-  { id: 3, name: 'Berço de Madeira', category: 'Móveis', condition: 'Usado', desc: 'Berço com grade removível, colchão incluso.' },
-  { id: 4, name: 'Kit Brinquedos', category: 'Brinquedos', condition: 'Ótimo estado', desc: 'Chocalhos, mordedores e brinquedos de banho.' },
-  { id: 5, name: 'Body Branco 0-3m', category: 'Roupas', condition: 'Ótimo estado', desc: 'Body de algodão, tamanho recém-nascido.' },
-  { id: 6, name: 'Cadeirinha de Balanço', category: 'Acessórios', condition: 'Bom estado', desc: 'Cadeirinha com vibração e melodias.' },
-];
-
-export default function HomeScreen({ onDonate }) {
-  const { theme } = useTheme();
-  const [activeCategory, setActiveCategory] = useState('Todos');
+export default function HomeScreen({ onNavigate }) {
+  const { theme, toggleTheme } = useTheme();
   const s = styles(theme);
 
-  const filtered = activeCategory === 'Todos'
-    ? MOCK_PRODUCTS
-    : MOCK_PRODUCTS.filter(p => p.category === activeCategory);
-
   return (
-    <ScrollView style={s.container} showsVerticalScrollIndicator={false}>
-
-      {/* Hero compacto */}
+    <ScrollView style={s.container} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      {/* Botão tema */}
+      <TouchableOpacity onPress={toggleTheme} style={s.themeBtn} activeOpacity={0.7}>
+        <Text style={s.themeBtnText}>{theme.isDark ? ' Modo Claro' : ' Modo Escuro'}</Text>
+      </TouchableOpacity>
+      {/* Hero */}
       <View style={s.hero}>
         <View style={s.heroCircle1} />
         <View style={s.heroCircle2} />
-        <View style={s.heroLeft}>
-          <View style={s.badge}>
-            <Text style={s.badgeText}>DOAÇÕES PARA BEBÊS</Text>
-          </View>
-          <Text style={s.heroTitle}>
-            Conectando quem doa com{' '}
-            <Text style={s.heroTitleItalic}>quem precisa</Text>
-          </Text>
-          <Text style={s.heroSubtitle}>
-            Itens gratuitos de famílias da sua região.
-          </Text>
-          <TouchableOpacity style={s.heroBtn} activeOpacity={0.8} onPress={onDonate}>
-            <Text style={s.heroBtnText}>Quero doar</Text>
-          </TouchableOpacity>
-          <View style={s.features}>
-            {['Gratuito', 'Seguro', 'Solidário'].map((f, i) => (
-              <View key={i} style={s.featureChip}>
-                <Text style={s.featureChipText}>✓ {f}</Text>
-              </View>
-            ))}
-          </View>
+        <View style={s.logoCircle}>
+          <Image source={require('../../assets/logo.jpeg')} style={s.logoImage} />
         </View>
-        <View style={s.heroRight} />
+        <Text style={s.heroTitle}>Além do Positivo</Text>
+        <Text style={s.heroSubtitle}>
+          Conectando quem faz com quem precisa
+        </Text>
       </View>
 
-      {/* Categorias */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.categoriesContent}
-        style={s.categoriesScroll}
-      >
-        {CATEGORIES.map((cat) => (
+      {/* Cards */}
+      <View style={s.cardsGrid}>
+        {CARDS.map((card) => (
           <TouchableOpacity
-            key={cat.label}
-            style={[s.catBtn, activeCategory === cat.label && s.catBtnActive]}
-            onPress={() => setActiveCategory(cat.label)}
-            activeOpacity={0.7}
+            key={card.key}
+            style={s.card}
+            onPress={() => onNavigate?.(card.key)}
+            activeOpacity={0.8}
           >
-            <Text style={[s.catLabel, activeCategory === cat.label && s.catLabelActive]}>
-              {cat.label}
-            </Text>
+            <Text style={s.cardIcon}>{card.icon}</Text>
+            <Text style={s.cardTitle}>{card.title}</Text>
+            <Text style={s.cardDesc}>{card.description}</Text>
           </TouchableOpacity>
         ))}
-      </ScrollView>
-
-
-
-      {/* Grid de produtos 2 colunas */}
-      <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Doações disponíveis</Text>
-        <Text style={s.sectionSubtitle}>{filtered.length} itens encontrados</Text>
       </View>
-
-      {filtered.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyText}>Nenhum item nessa categoria.</Text>
-        </View>
-      ) : (
-        <View style={s.productsGrid}>
-          {filtered.map((product, index) => (
-            <View key={product.id} style={[s.productCard, index % 2 === 0 ? { marginRight: 8 } : { marginLeft: 8 }]}>
-              <View style={s.productImage} />
-              <View style={s.productInfo}>
-                <View style={s.productBadges}>
-                  <View style={s.productBadge}>
-                    <Text style={s.productBadgeText}>{product.condition}</Text>
-                  </View>
-                </View>
-                <Text style={s.productName} numberOfLines={1}>{product.name}</Text>
-                <Text style={s.productDesc} numberOfLines={2}>{product.desc}</Text>
-                <TouchableOpacity style={s.productBtn} activeOpacity={0.8}>
-                  <Text style={s.productBtnText}>Ver Detalhes</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          ))}
-        </View>
-      )}
-
-
     </ScrollView>
   );
 }
 
 const styles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.bg },
+  themeBtn: { alignSelf: 'flex-end', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, backgroundColor: theme.pinkLight, borderWidth: 1, borderColor: theme.border },
+  themeBtnText: { color: theme.pink, fontSize: 13, fontWeight: '600' },
+  scroll: { padding: 16, gap: 20 },
 
-  // Hero
   hero: {
+    alignItems: 'center', paddingVertical: 32,
     backgroundColor: theme.bgSecondary,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
+    borderRadius: 24, overflow: 'hidden',
+    position: 'relative', gap: 8,
+  },
+  heroCircle1: {
+    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(232,96,122,0.08)', top: -60, right: -60,
+  },
+  heroCircle2: {
+    position: 'absolute', width: 150, height: 150, borderRadius: 75,
+    backgroundColor: 'rgba(232,96,122,0.06)', bottom: -40, left: -40,
+  },
+  logoCircle: {
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 3, borderColor: '#e8a0a8',
     overflow: 'hidden',
-    position: 'relative',
   },
-  heroCircle1: { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(232,96,122,0.08)', top: -50, right: -50 },
-  heroCircle2: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(232,96,122,0.06)', bottom: -30, left: -30 },
-  heroLeft: { flex: 1, zIndex: 1 },
-  badge: {
-    backgroundColor: 'rgba(232,96,122,0.15)',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, marginBottom: 10,
-  },
-  badgeText: { color: theme.pink, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  heroTitle: { fontSize: 20, fontWeight: '800', color: theme.text, lineHeight: 28, marginBottom: 8 },
-  heroTitleItalic: { fontStyle: 'italic', color: theme.pink },
-  heroSubtitle: { fontSize: 12, color: theme.textMuted, lineHeight: 18, marginBottom: 14 },
-  heroBtn: {
-    backgroundColor: theme.pink,
-    paddingHorizontal: 18, paddingVertical: 10,
-    borderRadius: 22, alignSelf: 'flex-start',
-    shadowColor: theme.pink, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
-    marginBottom: 14,
-  },
-  heroBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  features: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  featureChip: {
-    backgroundColor: 'rgba(232,96,122,0.12)',
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 12,
-  },
-  featureChipText: { color: theme.pink, fontSize: 11, fontWeight: '600' },
-  heroRight: {
-    width: 90, height: 90,
-    backgroundColor: 'rgba(232,96,122,0.12)',
-    borderRadius: 28,
-    alignItems: 'center', justifyContent: 'center',
-    marginLeft: 16,
-  },
-  heroEmoji: { fontSize: 44 },
-
-  // Categorias
-  categoriesScroll: { borderBottomWidth: 1, borderBottomColor: theme.border },
-  categoriesContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  catBtn: {
-    flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: theme.border,
-    backgroundColor: theme.bg,
-  },
-  catBtnActive: { borderColor: theme.pink, backgroundColor: 'rgba(232,96,122,0.1)' },
-  catIcon: { fontSize: 14 },
-  catLabel: { fontSize: 13, color: theme.textMuted, fontWeight: '500' },
-  catLabelActive: { color: theme.pink, fontWeight: '700' },
-
-  // Seção
-  sectionHeader: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
-  sectionSubtitle: { fontSize: 12, color: theme.textMuted, marginTop: 2 },
-
-  // Como funciona
-  howContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  howCard: {
-    width: 150,
-    backgroundColor: theme.card,
-    borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: theme.border,
-    alignItems: 'center',
-  },
-  howNum: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: theme.pink,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
-  },
-  howNumText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  howIcon: { fontSize: 26, marginBottom: 6 },
-  howTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4, textAlign: 'center' },
-  howDesc: { fontSize: 11, color: theme.textMuted, textAlign: 'center', lineHeight: 16 },
+  logoImage: { width: '100%', height: '100%' },
+  heroTitle: { fontSize: 24, fontWeight: '800', color: theme.pink },
+  heroSubtitle: { fontSize: 13, color: theme.textMuted, textAlign: 'center', paddingHorizontal: 32, lineHeight: 20 },
 
   // Grid 2 colunas
-  productsGrid: {
-    flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4,
-  },
-  productCard: {
-    width: CARD_WIDTH,
+  cardsGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  card: {
+    width: '47%',
     backgroundColor: theme.card,
-    borderRadius: 16, borderWidth: 1,
-    borderColor: theme.border,
-    overflow: 'hidden', marginBottom: 16,
+    borderRadius: 20, padding: 20,
+    borderWidth: 1, borderColor: theme.border,
+    alignItems: 'center', gap: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 8, elevation: 3,
   },
-  productImage: {
-    height: 120,
-    backgroundColor: theme.pinkLight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  productImageEmoji: { fontSize: 44 },
-  productInfo: { padding: 10 },
-  productBadges: { flexDirection: 'row', marginBottom: 4 },
-  productBadge: {
-    backgroundColor: 'rgba(72,187,120,0.15)',
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
-  },
-  productBadgeText: { fontSize: 10, color: '#2d8a5e', fontWeight: '600' },
-  productName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 3 },
-  productDesc: { fontSize: 11, color: theme.textMuted, lineHeight: 16, marginBottom: 8 },
-  productBtn: {
-    backgroundColor: theme.pink, borderRadius: 10,
-    paddingVertical: 7, alignItems: 'center',
-  },
-  productBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-
-  // Empty
-  empty: { alignItems: 'center', paddingVertical: 48 },
-  emptyIcon: { fontSize: 40, marginBottom: 8 },
-  emptyText: { color: theme.textMuted, fontSize: 14 },
-
-  // Footer
-  footer: {
-    padding: 24, alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: theme.border,
-    gap: 8, marginTop: 8,
-  },
-  footerText: { color: theme.textMuted, fontSize: 12 },
-  footerLinks: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  footerLink: { color: theme.pink, fontSize: 12 },
-  footerSep: { color: theme.textMuted },
+  cardIcon: { fontSize: 36 },
+  cardTitle: { fontSize: 15, fontWeight: '700', color: theme.text, textAlign: 'center' },
+  cardDesc: { fontSize: 12, color: theme.textMuted, textAlign: 'center', lineHeight: 18 },
 });

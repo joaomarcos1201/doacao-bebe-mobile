@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
-  StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
+  StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 
@@ -26,13 +26,11 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={s.backBtnText}>← Voltar</Text>
-        </TouchableOpacity>
-
         <View style={s.card}>
           {/* Logo */}
-          <View style={s.logoCircle} />
+          <View style={s.logoCircle}>
+            <Image source={require('../../assets/logo.jpeg')} style={s.logoImage} />
+          </View>
           <Text style={s.title}>Além do Positivo</Text>
           <Text style={s.subtitle}>Faça login para continuar</Text>
 
@@ -111,11 +109,10 @@ const styles = (theme) => StyleSheet.create({
   logoCircle: {
     width: 64, height: 64, borderRadius: 32,
     borderWidth: 2, borderColor: '#e8a0a8',
-    backgroundColor: 'rgba(232,96,122,0.1)',
-    alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
     marginBottom: 12,
   },
-  logoEmoji: { fontSize: 30 },
+  logoImage: { width: '100%', height: '100%' },
   title: { fontSize: 20, fontWeight: '800', color: theme.pink, marginBottom: 4 },
   subtitle: { fontSize: 13, color: theme.textMuted, marginBottom: 28 },
   fields: { width: '100%', gap: 16, marginBottom: 24 },

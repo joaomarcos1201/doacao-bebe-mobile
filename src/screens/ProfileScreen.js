@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, Image, Alert,
 } from 'react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
 
 const checks = [
@@ -31,9 +32,52 @@ export default function ProfileScreen({ onBack, user, onProductPress }) {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [avatar, setAvatar] = useState(null);
   const s = styles(theme);
 
   const initial = name.trim().charAt(0).toUpperCase() || '?';
+
+  const pickAvatar = async () => {
+    const { status: galleryStatus } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    const { status: cameraStatus } = await ImagePicker.requestCameraPermissionsAsync();
+
+    if (galleryStatus !== 'granted' && cameraStatus !== 'granted') {
+      alert('Precisamos de permissão para acessar sua galeria ou câmera.');
+      return;
+    }
+
+    Alert.alert(
+      'Alterar foto',
+      'Escolha uma opção',
+      [
+        {
+          text: 'Câmera',
+          onPress: async () => {
+            const result = await ImagePicker.launchCameraAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.7,
+            });
+            if (!result.canceled) setAvatar(result.assets[0].uri);
+          },
+        },
+        {
+          text: 'Galeria',
+          onPress: async () => {
+            const result = await ImagePicker.launchImageLibraryAsync({
+              mediaTypes: ['images'],
+              allowsEditing: true,
+              aspect: [1, 1],
+              quality: 0.7,
+            });
+            if (!result.canceled) setAvatar(result.assets[0].uri);
+          },
+        },
+        { text: 'Cancelar', style: 'cancel' },
+      ]
+    );
+  };
 
   const handleSave = () => {
     setLoading(true);
@@ -48,18 +92,30 @@ export default function ProfileScreen({ onBack, user, onProductPress }) {
           <Text style={s.backBtn}>← Voltar</Text>
         </TouchableOpacity>
         <Text style={s.navTitle}>Meu Perfil</Text>
-        <TouchableOpacity onPress={toggleTheme} activeOpacity={0.7}>
-          <Text style={s.themeBtn}>{theme.isDark ? '☀️' : '🌙'}</Text>
+        <TouchableOpacity onPress={toggleTheme} style={s.themeBtn} activeOpacity={0.7}>
+          <Text style={s.themeBtnText}>{theme.isDark ? 'Modo Claro' : 'Modo Escuro'}</Text>
         </TouchableOpacity>
       </View>
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Avatar */}
         <View style={s.avatarSection}>
-          <View style={s.avatar}>
-            <Text style={s.avatarInitial}>{initial}</Text>
-          </View>
+          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.8} style={s.avatarWrap}>
+            {avatar ? (
+              <Image source={{ uri: avatar }} style={s.avatarImage} />
+            ) : (
+              <View style={s.avatar}>
+                <Text style={s.avatarInitial}>{initial}</Text>
+              </View>
+            )}
+            <View style={s.avatarEditBadge}>
+              <Text style={s.avatarEditBadgeText}>✏️</Text>
+            </View>
+          </TouchableOpacity>
           <Text style={s.avatarName}>{name || 'Usuário'}</Text>
+          <TouchableOpacity onPress={pickAvatar} activeOpacity={0.7}>
+            <Text style={s.alterarFotoText}>Alterar foto</Text>
+          </TouchableOpacity>
           <Text style={s.avatarEmail}>{email || 'sem email'}</Text>
         </View>
 
@@ -227,12 +283,14 @@ const styles = (theme) => StyleSheet.create({
   },
   backBtn: { color: theme.pink, fontSize: 15, fontWeight: '600' },
   navTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
-  themeBtn: { fontSize: 20 },
+  themeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: theme.pinkLight, borderWidth: 1, borderColor: theme.border },
+  themeBtnText: { color: theme.pink, fontSize: 12, fontWeight: '600' },
 
   scroll: { padding: 16, gap: 16 },
 
   // Avatar
   avatarSection: { alignItems: 'center', paddingVertical: 8, gap: 6 },
+  avatarWrap: { position: 'relative' },
   avatar: {
     width: 80, height: 80, borderRadius: 40,
     backgroundColor: theme.pink,
@@ -240,7 +298,20 @@ const styles = (theme) => StyleSheet.create({
     shadowColor: theme.pink, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
   },
+  avatarImage: {
+    width: 80, height: 80, borderRadius: 40,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2, shadowRadius: 8, elevation: 5,
+  },
+  avatarEditBadge: {
+    position: 'absolute', bottom: 0, right: 0,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: theme.pink, borderWidth: 2, borderColor: theme.bg,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarEditBadgeText: { fontSize: 11 },
   avatarInitial: { color: '#fff', fontSize: 32, fontWeight: '700' },
+  alterarFotoText: { color: theme.pink, fontSize: 13, fontWeight: '600' },
   avatarName: { fontSize: 18, fontWeight: '700', color: theme.text },
   avatarEmail: { fontSize: 13, color: theme.textMuted },
 

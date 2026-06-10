@@ -1,46 +1,47 @@
 import React, { useState } from 'react';
 import { StyleSheet, SafeAreaView, View } from 'react-native';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
-import Navbar from './src/components/Navbar';
-import DrawerMenu from './src/components/DrawerMenu';
-import BottomBar from './src/components/BottomBar';
+
+// Telas ativas
 import HomeScreen from './src/screens/HomeScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import DonationScreen from './src/screens/DonationScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
 import AboutScreen from './src/screens/AboutScreen';
+import ChatScreen from './src/screens/ChatScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
-import ExploreScreen from './src/screens/ExploreScreen';
+
+// Telas preservadas (ocultas da navegação principal)
+// import ExploreScreen from './src/screens/ExploreScreen';
+
+// Componentes preservados (ocultos da navegação principal)
+// import Navbar from './src/components/Navbar';
+// import BottomBar from './src/components/BottomBar';
+// import DrawerMenu from './src/components/DrawerMenu';
 
 function AppContent() {
   const { theme } = useTheme();
-  const [screen, setScreen] = useState('home');
-  const [activeTab, setActiveTab] = useState('home');
+  const [screen, setScreen] = useState('login');
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [exploreSearch, setExploreSearch] = useState('');
-  const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState(null);
 
   const handleLoginSuccess = (userData) => {
     setUser(userData);
     setScreen('home');
-    setActiveTab('home');
   };
 
-  const handleTabPress = (tab) => {
-    setActiveTab(tab);
-    if (tab === 'home') setScreen('home');
-    if (tab === 'explore') { setExploreSearch(''); setScreen('explore'); }
-    if (tab === 'donate') setScreen('donation');
+  const handleNavigate = (key) => {
+    setScreen(key);
   };
 
-  // Telas sem BottomBar
+  const bg = { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' };
+
   if (screen === 'login') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
+      <SafeAreaView style={[styles.safe, bg]}>
         <LoginScreen
-          onBack={() => setScreen('home')}
+          onBack={() => setScreen('login')}
           onLoginSuccess={handleLoginSuccess}
           onRegister={() => setScreen('register')}
           onForgotPassword={() => {}}
@@ -51,7 +52,7 @@ function AppContent() {
 
   if (screen === 'register') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
+      <SafeAreaView style={[styles.safe, bg]}>
         <RegisterScreen
           onBack={() => setScreen('login')}
           onLoginRedirect={() => setScreen('login')}
@@ -60,9 +61,17 @@ function AppContent() {
     );
   }
 
+  if (screen === 'donation') {
+    return (
+      <SafeAreaView style={[styles.safe, bg]}>
+        <DonationScreen onBack={() => setScreen('home')} />
+      </SafeAreaView>
+    );
+  }
+
   if (screen === 'profile') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
+      <SafeAreaView style={[styles.safe, bg]}>
         <ProfileScreen
           onBack={() => setScreen('home')}
           user={user}
@@ -74,7 +83,7 @@ function AppContent() {
 
   if (screen === 'productDetail') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
+      <SafeAreaView style={[styles.safe, bg]}>
         <ProductDetailScreen onBack={() => setScreen('profile')} product={selectedProduct} />
       </SafeAreaView>
     );
@@ -82,7 +91,7 @@ function AppContent() {
 
   if (screen === 'about') {
     return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
+      <SafeAreaView style={[styles.safe, bg]}>
         <AboutScreen
           onBack={() => setScreen('home')}
           onDonate={() => setScreen('donation')}
@@ -92,39 +101,18 @@ function AppContent() {
     );
   }
 
-  // Tela principal com BottomBar
+  if (screen === 'chat') {
+    return (
+      <SafeAreaView style={[styles.safe, bg]}>
+        <ChatScreen user={user} onBack={() => setScreen('home')} />
+      </SafeAreaView>
+    );
+  }
+
+  // Home principal
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      {screen !== 'explore' && screen !== 'donation' && (
-        <Navbar
-          user={user}
-          onLogin={() => setScreen('login')}
-          onLogout={() => setUser(null)}
-          onSearch={(q) => { setExploreSearch(q); setScreen('explore'); setActiveTab('explore'); }}
-        />
-      )}
-      <View style={styles.content}>
-        {screen === 'explore' ? (
-          <ExploreScreen initialSearch={exploreSearch} />
-        ) : screen === 'donation' ? (
-          <DonationScreen onBack={() => { setScreen('home'); setActiveTab('home'); }} />
-        ) : (
-          <HomeScreen onDonate={() => setScreen('donation')} />
-        )}
-      </View>
-      <BottomBar
-        activeTab={activeTab}
-        onTabPress={handleTabPress}
-        onMenuOpen={() => setDrawerOpen(true)}
-      />
-      <DrawerMenu
-        visible={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
-        isAdmin={user?.isAdmin}
-        onDonate={() => setScreen('donation')}
-        onProfile={() => setScreen('profile')}
-        onAbout={() => setScreen('about')}
-      />
+      <HomeScreen onNavigate={handleNavigate} />
     </SafeAreaView>
   );
 }
@@ -139,5 +127,4 @@ export default function App() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1 },
-  content: { flex: 1 },
 });

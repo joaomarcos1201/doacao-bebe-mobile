@@ -37,8 +37,8 @@ export default function AboutScreen({ onBack, onDonate, onViewProducts }) {
           <Text style={s.backBtn}>← Voltar</Text>
         </TouchableOpacity>
         <Text style={s.navTitle}>Sobre Nós</Text>
-        <TouchableOpacity onPress={toggleTheme} activeOpacity={0.7}>
-          <Text style={s.themeBtn}>{theme.isDark ? '☀️' : '🌙'}</Text>
+        <TouchableOpacity onPress={toggleTheme} style={s.themeBtn} activeOpacity={0.7}>
+          <Text style={s.themeBtnText}>{theme.isDark ? 'Modo Claro' : 'Modo Escuro'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -81,9 +81,6 @@ export default function AboutScreen({ onBack, onDonate, onViewProducts }) {
           <TouchableOpacity style={s.btnPrimary} onPress={onDonate} activeOpacity={0.8}>
             <Text style={s.btnPrimaryText}>🎁  Fazer uma Doação</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={s.btnOutline} onPress={onViewProducts} activeOpacity={0.8}>
-            <Text style={s.btnOutlineText}>Ver Produtos</Text>
-          </TouchableOpacity>
         </View>
       </ScrollView>
     </View>
@@ -100,7 +97,8 @@ const styles = (theme) => StyleSheet.create({
   },
   backBtn: { color: theme.pink, fontSize: 15, fontWeight: '600' },
   navTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
-  themeBtn: { fontSize: 20 },
+  themeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: theme.pinkLight, borderWidth: 1, borderColor: theme.border },
+  themeBtnText: { color: theme.pink, fontSize: 12, fontWeight: '600' },
 
   scroll: { padding: 16, gap: 16, alignItems: 'center' },
 

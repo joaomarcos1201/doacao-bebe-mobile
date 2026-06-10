@@ -18,8 +18,8 @@ export default function ProductDetailScreen({ onBack, product }) {
           <Text style={s.backBtn}>← Voltar</Text>
         </TouchableOpacity>
         <Text style={s.navTitle}>Detalhes do Produto</Text>
-        <TouchableOpacity onPress={toggleTheme} activeOpacity={0.7}>
-          <Text style={s.themeBtn}>{theme.isDark ? '☀️' : '🌙'}</Text>
+        <TouchableOpacity onPress={toggleTheme} style={s.themeBtn} activeOpacity={0.7}>
+          <Text style={s.themeBtnText}>{theme.isDark ? '☀️ Claro' : '🌙 Escuro'}</Text>
         </TouchableOpacity>
       </View>
 
@@ -71,7 +71,8 @@ const styles = (theme) => StyleSheet.create({
   },
   backBtn: { color: theme.pink, fontSize: 15, fontWeight: '600' },
   navTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
-  themeBtn: { fontSize: 20 },
+  themeBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: theme.pinkLight, borderWidth: 1, borderColor: theme.border },
+  themeBtnText: { color: theme.pink, fontSize: 12, fontWeight: '600' },
 
   scroll: { padding: 16, gap: 16 },
 
