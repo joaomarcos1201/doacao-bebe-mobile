@@ -36,9 +36,11 @@ export default function DonationScreen({ onBack }) {
   const [donorName, setDonorName] = useState('');
   const [cpf, setCpf] = useState('');
   const [photo, setPhoto] = useState(null);
+  const [price, setPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState(null);
+
   const s = styles(theme);
 
   const pickImage = async () => {
@@ -63,9 +65,15 @@ export default function DonationScreen({ onBack }) {
       formData.append('categoria', category);
       formData.append('marca', 'Sem marca');
       formData.append('conservacao', condition);
-      formData.append('preco', '0');
+
+      // Preço opcional (formato de vendas)
+      const normalizedPrice = price.toString().replace(',', '.').trim();
+      const priceValue = normalizedPrice === '' ? '0' : normalizedPrice;
+      formData.append('preco', priceValue);
+
       formData.append('peso', '0');
       formData.append('altura', '0');
+
       formData.append('largura', '0');
       formData.append('comprimento', '0');
       formData.append('cepOrigem', '00000-000');
@@ -188,7 +196,20 @@ export default function DonationScreen({ onBack }) {
               ))}
             </View>
           </View>
+
+          <View style={s.fieldGroup}>
+            <Text style={s.label}>Preço (R$)</Text>
+            <TextInput
+              style={s.input}
+              value={price}
+              onChangeText={setPrice}
+              placeholder="Ex: 50"
+              placeholderTextColor={theme.textMuted}
+              keyboardType="decimal-pad"
+            />
+          </View>
         </View>
+
 
         {/* Divisor */}
         <View style={s.divider} />
