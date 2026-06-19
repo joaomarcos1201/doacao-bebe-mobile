@@ -5,6 +5,7 @@ const TOKEN_KEY = 'AUTH_TOKEN';
 export async function salvarToken(token) {
   try {
     await SecureStore.setItemAsync(TOKEN_KEY, token);
+    console.log('[AUTH] saved token:', token ? 'yes' : 'no');
     return true;
   } catch (e) {
     console.log('[AUTH] salvarToken error', e?.message ?? e);
@@ -15,6 +16,7 @@ export async function salvarToken(token) {
 export async function buscarToken() {
   try {
     const t = await SecureStore.getItemAsync(TOKEN_KEY);
+    console.log('[AUTH] loaded token:', t ? 'yes' : 'no');
     return t;
   } catch (e) {
     console.log('[AUTH] buscarToken error', e?.message ?? e);

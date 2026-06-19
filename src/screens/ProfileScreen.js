@@ -24,7 +24,7 @@ const MOCK_ANUNCIOS = [
   { id: 3, name: 'Berço de Madeira', category: 'Móveis', condition: 'Usado', status: 'Encerrado' },
 ];
 
-export default function ProfileScreen({ onBack, user, onProductPress }) {
+export default function ProfileScreen({ onBack, user, onProductPress, onMyOrders, onMySales, onWallet }) {
   const { theme, toggleTheme } = useTheme();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -228,6 +228,19 @@ export default function ProfileScreen({ onBack, user, onProductPress }) {
           </TouchableOpacity>
         </View>
 
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Minhas funcionalidades</Text>
+          <TouchableOpacity style={s.menuItem} onPress={onMyOrders} activeOpacity={0.7}>
+            <Text style={s.menuItemText}>Meus Pedidos</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.menuItem} onPress={onMySales} activeOpacity={0.7}>
+            <Text style={s.menuItemText}>Minhas Vendas</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={s.menuItem} onPress={onWallet} activeOpacity={0.7}>
+            <Text style={s.menuItemText}>Minha Carteira</Text>
+          </TouchableOpacity>
+        </View>
+
         {/* Card meus anúncios */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Meus Anúncios</Text>
@@ -356,6 +369,13 @@ const styles = (theme) => StyleSheet.create({
   },
   saveBtnDisabled: { opacity: 0.7 },
   saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  menuItem: {
+    backgroundColor: theme.isDark ? '#112a44' : '#f8f0f2',
+    borderRadius: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 18,
+  },
+  menuItemText: { color: theme.text, fontSize: 14, fontWeight: '700' },
 
   // Anúncios
   emptyAds: { alignItems: 'center', paddingVertical: 24, gap: 8 },

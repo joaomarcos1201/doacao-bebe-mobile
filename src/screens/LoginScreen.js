@@ -4,7 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import api from '../services/api';
+import api, { setSessionToken } from '../services/api';
 import { salvarToken, salvarUsuario, buscarToken, buscarUsuario } from '../services/auth';
 
 export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLoginSuccess }) {
@@ -24,6 +24,7 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
       const data = resp.data;
       // salvar token e usuário
       await salvarToken(data.token);
+      setSessionToken(data.token);
       const user = { id: data.id, name: data.nome ?? data.name, email: data.email, isAdmin: !!data.isAdmin };
       await salvarUsuario(user);
       setLoading(false);
@@ -47,6 +48,7 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
         const token = await buscarToken();
         const user = await buscarUsuario();
         if (token && user) {
+          setSessionToken(token);
           onLoginSuccess?.(user);
         }
       } catch (e) {

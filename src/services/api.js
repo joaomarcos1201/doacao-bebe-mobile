@@ -8,24 +8,46 @@ const api = axios.create({
   timeout: 30000,
 });
 
+let currentToken = null;
+
+export function setSessionToken(token) {
+  currentToken = token;
+  if (token) {
+    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    api.defaults.headers.common.authorization = `Bearer ${token}`;
+  } else {
+    delete api.defaults.headers.common.Authorization;
+    delete api.defaults.headers.common.authorization;
+  }
+  return token;
+}
+
 api.interceptors.request.use(
   async (config) => {
     try {
-      const token = await buscarToken();
-      if (token) {
-        config.headers = config.headers || {};
-        if (!config.headers.Authorization) {
-          config.headers.Authorization = `Bearer ${token}`;
+      let token = currentToken;
+      if (!token) {
+        token = await buscarToken();
+        if (token) {
+          setSessionToken(token);
         }
       }
+      console.log('[API] token loaded:', token ? 'yes' : 'no');
+      config.headers = config.headers || {};
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+        config.headers['authorization'] = `Bearer ${token}`;
+      }
     } catch (e) {
-      // ignore token errors
+      console.log('[API] token load error', e?.message ?? e);
     }
     if (typeof config.data !== 'undefined') {
       console.log('[API] Request:', config.method?.toUpperCase(), config.url, config.data);
     } else {
       console.log('[API] Request:', config.method?.toUpperCase(), config.url);
     }
+    console.log('[API] Request headers:', config.headers);
+    console.log('[API] Request Authorization header value:', config.headers?.Authorization || config.headers?.authorization || 'none');
     return config;
   },
   (error) => {

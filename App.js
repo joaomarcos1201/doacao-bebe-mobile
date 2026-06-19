@@ -8,6 +8,9 @@ import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import DonationScreen from './src/screens/DonationScreen';
 import ProfileScreen from './src/screens/ProfileScreen';
+import MyOrdersScreen from './src/screens/MyOrdersScreen';
+import MySalesScreen from './src/screens/MySalesScreen';
+import WalletScreen from './src/screens/WalletScreen';
 import AboutScreen from './src/screens/AboutScreen';
 import ChatScreen from './src/screens/ChatScreen';
 import ProductDetailScreen from './src/screens/ProductDetailScreen';
@@ -76,7 +79,34 @@ function AppContent() {
           onBack={() => setScreen('home')}
           user={user}
           onProductPress={(product) => { setSelectedProduct(product); setScreen('productDetail'); }}
+          onMyOrders={() => setScreen('myOrders')}
+          onMySales={() => setScreen('mySales')}
+          onWallet={() => setScreen('wallet')}
         />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === 'myOrders') {
+    return (
+      <SafeAreaView style={[styles.safe, bg]}>
+        <MyOrdersScreen onBack={() => setScreen('profile')} />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === 'mySales') {
+    return (
+      <SafeAreaView style={[styles.safe, bg]}>
+        <MySalesScreen onBack={() => setScreen('profile')} />
+      </SafeAreaView>
+    );
+  }
+
+  if (screen === 'wallet') {
+    return (
+      <SafeAreaView style={[styles.safe, bg]}>
+        <WalletScreen onBack={() => setScreen('profile')} />
       </SafeAreaView>
     );
   }

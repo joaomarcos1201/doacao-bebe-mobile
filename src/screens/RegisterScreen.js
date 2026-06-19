@@ -4,7 +4,7 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import api from '../services/api';
+import api, { setSessionToken } from '../services/api';
 import { salvarToken, salvarUsuario } from '../services/auth';
 
 const maskCPF = (value) => {
@@ -29,6 +29,7 @@ export default function RegisterScreen({ onBack, onLoginRedirect }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [message, setMessage] = useState(null);
   const s = styles(theme);
 
   const handleRegister = () => {
@@ -40,6 +41,7 @@ export default function RegisterScreen({ onBack, onLoginRedirect }) {
         const data = resp.data;
         // salvar token e usuário para sessão persistente
         await salvarToken(data.token);
+        setSessionToken(data.token);
         const user = { id: data.id, name: data.nome ?? data.name, email: data.email, isAdmin: !!data.isAdmin };
         await salvarUsuario(user);
         setLoading(false);
