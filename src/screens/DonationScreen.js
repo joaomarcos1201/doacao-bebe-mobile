@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
 
 const maskCPF = (v) => {
   const d = v.replace(/\D/g, '').slice(0, 11);
@@ -37,6 +38,7 @@ export default function DonationScreen({ onBack }) {
   const [photo, setPhoto] = useState(null);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [errorMessage, setErrorMessage] = useState(null);
   const s = styles(theme);
 
   const pickImage = async () => {
@@ -51,9 +53,52 @@ export default function DonationScreen({ onBack }) {
     if (!result.canceled) setPhoto(result.assets[0].uri);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setLoading(true);
-    setTimeout(() => { setLoading(false); setSuccess(true); }, 1500);
+    setErrorMessage(null);
+    try {
+      const formData = new FormData();
+      formData.append('nome', productName);
+      formData.append('descricao', description);
+      formData.append('categoria', category);
+      formData.append('marca', 'Sem marca');
+      formData.append('conservacao', condition);
+      formData.append('preco', '0');
+      formData.append('peso', '0');
+      formData.append('altura', '0');
+      formData.append('largura', '0');
+      formData.append('comprimento', '0');
+      formData.append('cepOrigem', '00000-000');
+      if (photo) {
+        const uriParts = photo.split('/');
+        const name = uriParts[uriParts.length - 1];
+        formData.append('imagem', {
+          uri: photo,
+          type: 'image/jpeg',
+          name,
+        });
+      }
+
+      await api.post('/api/products', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      setSuccess(true);
+    } catch (error) {
+      console.log('[Donation] submit error', error);
+      const apiErr = error?.apiError;
+      if (apiErr?.status === 401) {
+        setErrorMessage('Autenticação necessária. Faça login novamente.');
+      } else if (apiErr?.status === 400) {
+        setErrorMessage(apiErr?.message || 'Dados inválidos. Verifique os campos obrigatórios.');
+      } else {
+        setErrorMessage('Não foi possível enviar o anúncio. Tente novamente.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -202,6 +247,8 @@ export default function DonationScreen({ onBack }) {
           )}
         </TouchableOpacity>
 
+        {errorMessage ? <Text style={s.errorText}>{errorMessage}</Text> : null}
+
         <TouchableOpacity
           style={[s.submitBtn, loading && s.submitBtnDisabled]}
           onPress={handleSubmit}
@@ -329,4 +376,5 @@ const styles = (theme) => StyleSheet.create({
     paddingHorizontal: 32, paddingVertical: 12, borderRadius: 22,
   },
   successBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  errorText: { color: '#e05555', textAlign: 'center', marginBottom: 8 },
 });

@@ -4,6 +4,8 @@ import {
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
+import { salvarToken, salvarUsuario } from '../services/auth';
 
 const maskCPF = (value) => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -31,11 +33,28 @@ export default function RegisterScreen({ onBack, onLoginRedirect }) {
 
   const handleRegister = () => {
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setSuccess(true);
-      setTimeout(() => onLoginRedirect?.(), 3000);
-    }, 1500);
+    (async () => {
+      try {
+        const payload = { nome: name, email, cpf, senha: password };
+        const resp = await api.post('/api/auth/cadastro', payload);
+        const data = resp.data;
+        // salvar token e usuário para sessão persistente
+        await salvarToken(data.token);
+        const user = { id: data.id, name: data.nome ?? data.name, email: data.email, isAdmin: !!data.isAdmin };
+        await salvarUsuario(user);
+        setLoading(false);
+        setSuccess(true);
+        setTimeout(() => onLoginRedirect?.(), 3000);
+      } catch (err) {
+        setLoading(false);
+        console.log('[Register] error', err);
+        const apiErr = err?.apiError;
+        const status = apiErr?.status;
+        if (status === 400) setMessage(apiErr?.message || 'Dados inválidos.');
+        else if (!status) setMessage('Falha de conexão. Tente novamente.');
+        else setMessage(apiErr?.message || 'Erro no servidor.');
+      }
+    })();
   };
 
   if (success) {
@@ -64,6 +83,7 @@ export default function RegisterScreen({ onBack, onLoginRedirect }) {
           </View>
           <Text style={s.title}>Criar conta</Text>
           <Text style={s.subtitle}>Além do Positivo</Text>
+          {message && <Text style={s.errorText}>{message}</Text>}
 
           <View style={s.fields}>
             <View style={s.fieldGroup}>
@@ -186,6 +206,7 @@ const styles = (theme) => StyleSheet.create({
     borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 14, color: theme.text,
   },
+  errorText: { color: '#e05555', marginBottom: 12, textAlign: 'center' },
   passwordChecks: { marginTop: 8, gap: 4 },
   checkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   checkIcon: { fontSize: 13, fontWeight: '700' },

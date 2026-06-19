@@ -1,24 +1,59 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import api from '../services/api';
+import { salvarToken, salvarUsuario, buscarToken, buscarUsuario } from '../services/auth';
 
 export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLoginSuccess }) {
   const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState(null);
   const s = styles(theme);
 
   const handleLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
+    setMessage(null);
+    try {
+      const payload = { email, senha: password };
+      const resp = await api.post('/api/auth/login', payload);
+      const data = resp.data;
+      // salvar token e usuário
+      await salvarToken(data.token);
+      const user = { id: data.id, name: data.nome ?? data.name, email: data.email, isAdmin: !!data.isAdmin };
+      await salvarUsuario(user);
       setLoading(false);
-      onLoginSuccess?.({ name: 'Usuário', isAdmin: false });
-    }, 1500);
+      onLoginSuccess?.(user);
+    } catch (err) {
+      setLoading(false);
+      const apiErr = err?.apiError;
+      const status = apiErr?.status;
+      if (status === 401) setMessage('Credenciais inválidas. Verifique email e senha.');
+      else if (status === 403) setMessage('Acesso negado. Contate o suporte.');
+      else if (status === 400) setMessage(apiErr?.message || 'Requisição inválida.');
+      else if (status === 0 || !status) setMessage('Falha de conexão. Verifique sua internet.');
+      else setMessage(apiErr?.message || 'Erro no servidor. Tente mais tarde.');
+      console.log('[Login] error', err);
+    }
   };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = await buscarToken();
+        const user = await buscarUsuario();
+        if (token && user) {
+          onLoginSuccess?.(user);
+        }
+      } catch (e) {
+        // ignore
+      }
+    })();
+  }, []);
 
   return (
     <KeyboardAvoidingView
@@ -33,6 +68,7 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
           </View>
           <Text style={s.title}>Além do Positivo</Text>
           <Text style={s.subtitle}>Faça login para continuar</Text>
+          {message && <Text style={s.errorText}>{message}</Text>}
 
           {/* Campos */}
           <View style={s.fields}>
@@ -128,6 +164,7 @@ const styles = (theme) => StyleSheet.create({
     fontSize: 14,
     color: theme.text,
   },
+  errorText: { color: '#e05555', marginBottom: 12, textAlign: 'center' },
   loginBtn: {
     backgroundColor: theme.pink,
     width: '100%', paddingVertical: 14,
