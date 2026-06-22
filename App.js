@@ -34,6 +34,11 @@ function AppContent() {
     setScreen('home');
   };
 
+  const handleLogout = () => {
+    setUser(null);
+    setScreen('login');
+  };
+
   const handleNavigate = (key) => {
     setScreen(key);
   };
@@ -77,6 +82,7 @@ function AppContent() {
       <SafeAreaView style={[styles.safe, bg]}>
         <ProfileScreen
           onBack={() => setScreen('home')}
+          onLogout={handleLogout}
           user={user}
           onProductPress={(product) => { setSelectedProduct(product); setScreen('productDetail'); }}
           onMyOrders={() => setScreen('myOrders')}

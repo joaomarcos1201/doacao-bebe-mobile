@@ -24,7 +24,9 @@ const MOCK_ANUNCIOS = [
   { id: 3, name: 'Berço de Madeira', category: 'Móveis', condition: 'Usado', status: 'Encerrado' },
 ];
 
-export default function ProfileScreen({ onBack, user, onProductPress, onMyOrders, onMySales, onWallet }) {
+import { removerToken, removerUsuario } from '../services/auth';
+
+export default function ProfileScreen({ onBack, onLogout, user, onProductPress, onMyOrders, onMySales, onWallet }) {
   const { theme, toggleTheme } = useTheme();
   const [name, setName] = useState(user?.name ?? '');
   const [email, setEmail] = useState(user?.email ?? '');
@@ -34,6 +36,24 @@ export default function ProfileScreen({ onBack, user, onProductPress, onMyOrders
   const [loading, setLoading] = useState(false);
   const [avatar, setAvatar] = useState(null);
   const s = styles(theme);
+
+  const handleLogout = async () => {
+    await removerToken();
+    await removerUsuario();
+
+    // Como o App.js ainda não passa o callback de logout,
+    // a navegação correta é forçar para 'login' via onBack.
+    // (No App.js: Profile -> home). Então precisamos forçar login.
+    // Opção: disparar recarregamento do estado inicial.
+    // O método mais simples neste app é: chamar onBack e a tela de Login
+    // vai aparecer quando não houver usuário/token.
+    if (typeof onLogout === 'function') {
+      onLogout();
+    } else {
+      onBack?.();
+    }
+  };
+
 
   const initial = name.trim().charAt(0).toUpperCase() || '?';
 
@@ -230,9 +250,17 @@ export default function ProfileScreen({ onBack, user, onProductPress, onMyOrders
 
         <View style={s.card}>
           <Text style={s.cardTitle}>Minhas funcionalidades</Text>
+          <TouchableOpacity
+            style={[s.menuItem, { backgroundColor: 'rgba(224,85,85,0.10)', borderColor: 'rgba(224,85,85,0.35)', borderWidth: 1 }]}
+            onPress={handleLogout}
+            activeOpacity={0.7}
+          >
+            <Text style={[s.menuItemText, { color: '#e05555' }]}>Sair da conta</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={s.menuItem} onPress={onMyOrders} activeOpacity={0.7}>
             <Text style={s.menuItemText}>Meus Pedidos</Text>
           </TouchableOpacity>
+
           <TouchableOpacity style={s.menuItem} onPress={onMySales} activeOpacity={0.7}>
             <Text style={s.menuItemText}>Minhas Vendas</Text>
           </TouchableOpacity>

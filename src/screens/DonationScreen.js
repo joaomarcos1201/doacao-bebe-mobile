@@ -87,11 +87,10 @@ export default function DonationScreen({ onBack }) {
         });
       }
 
-      await api.post('/api/products', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      // Deixe o axios definir o boundary do multipart automaticamente.
+      // Forçar Content-Type pode causar 400 em alguns backends.
+      await api.post('/api/products', formData);
+
 
       setSuccess(true);
     } catch (error) {
@@ -100,7 +99,13 @@ export default function DonationScreen({ onBack }) {
       if (apiErr?.status === 401) {
         setErrorMessage('Autenticação necessária. Faça login novamente.');
       } else if (apiErr?.status === 400) {
-        setErrorMessage(apiErr?.message || 'Dados inválidos. Verifique os campos obrigatórios.');
+        // Caso mais comum: backend rejeita JWT expirado
+        const msg = apiErr?.message || '';
+        if (/JWT expired/i.test(msg)) {
+          setErrorMessage('Sessão expirada. Faça login novamente para cadastrar.');
+        } else {
+          setErrorMessage(apiErr?.message || 'Dados inválidos. Verifique os campos obrigatórios.');
+        }
       } else {
         setErrorMessage('Não foi possível enviar o anúncio. Tente novamente.');
       }
