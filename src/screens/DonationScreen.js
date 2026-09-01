@@ -5,16 +5,7 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useTheme } from '../context/ThemeContext';
-
-const maskCPF = (v) => {
-  const d = v.replace(/\D/g, '').slice(0, 11);
-  return d.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
-};
-
-const maskPhone = (v) => {
-  const d = v.replace(/\D/g, '').slice(0, 11);
-  return d.replace(/(\d{2})(\d)/, '($1) $2').replace(/(\d{5})(\d{1,4})$/, '$1-$2');
-};
+import { getApiErrorMessage, productApi } from '../services/api';
 
 const CATEGORIES = [
   { label: 'Roupas', icon: '👕' },
@@ -37,18 +28,19 @@ const HOW_STEPS = [
   { num: '3', text: 'Interessados entram em contato via WhatsApp' },
 ];
 
-export default function DonationScreen({ onBack }) {
+export default function DonationScreen({ onBack, onProductCreated }) {
   const { theme, toggleTheme } = useTheme();
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [description, setDescription] = useState('');
   const [condition, setCondition] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [donorName, setDonorName] = useState('');
-  const [cpf, setCpf] = useState('');
-  const [photo, setPhoto] = useState(null);
+  const [brand, setBrand] = useState('');
+  const [price, setPrice] = useState('');
+  const [originZip, setOriginZip] = useState('');
+  const [photos, setPhotos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   const s = styles(theme);
 
   const pickImage = async () => {
@@ -56,19 +48,48 @@ export default function DonationScreen({ onBack }) {
     if (status !== 'granted') return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [1, 1],
+      allowsMultipleSelection: true,
+      selectionLimit: 4,
+      allowsEditing: false,
       quality: 0.7,
     });
-    if (!result.canceled) setPhoto(result.assets[0].uri);
+    if (!result.canceled) setPhotos(result.assets.slice(0, 4));
   };
 
-  const handleSubmit = () => {
+  const removePhoto = (index) => setPhotos((current) => current.filter((_, i) => i !== index));
+
+  const handleSubmit = async () => {
+    const numericPrice = Number(price.replace(',', '.'));
+    if (!productName.trim() || !description.trim() || !category || !brand.trim() || !condition || !originZip.trim()) {
+      setError('Preencha todos os campos obrigatórios.');
+      return;
+    }
+    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
+      setError('Informe um preço válido.');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError('');
+    try {
+      const formData = new FormData();
+      [['nome', productName], ['descricao', description], ['categoria', category], ['marca', brand], ['conservacao', condition], ['preco', numericPrice.toFixed(2)], ['cepOrigem', originZip.replace(/\D/g, '')]].forEach(([key, value]) => formData.append(key, value));
+      photos.forEach((photo, index) => formData.append(index === 0 ? 'imagem' : `imagem_${index}`, { uri: photo.uri, name: photo.fileName || `produto-${index + 1}.jpg`, type: photo.mimeType || 'image/jpeg' }));
+      await productApi.create(formData);
+      try { await onProductCreated?.(); } catch { /* The announcement was already created successfully. */ }
+      setProductName('');
+      setCategory('');
+      setDescription('');
+      setCondition('');
+      setBrand('');
+      setPrice('');
+      setOriginZip('');
+      setPhotos([]);
       setSuccess(true);
-    }, 1500);
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Não foi possível enviar o anúncio.'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -136,7 +157,7 @@ export default function DonationScreen({ onBack }) {
             />
           </View>
 
-          {/* Grid: Condição + WhatsApp */}
+          {/* Grid: Condição + Marca */}
           <View style={s.row}>
             <View style={[s.fieldGroup, s.flex1]}>
               <Text style={s.label}>Estado do produto</Text>
@@ -155,38 +176,37 @@ export default function DonationScreen({ onBack }) {
               ))}
             </View>
             <View style={[s.fieldGroup, s.flex1]}>
-              <Text style={s.label}>WhatsApp</Text>
+              <Text style={s.label}>Marca</Text>
               <TextInput
                 style={s.input}
-                value={whatsapp}
-                onChangeText={(v) => setWhatsapp(maskPhone(v))}
-                placeholder="(00) 00000-0000"
+                value={brand}
+                onChangeText={setBrand}
+                placeholder="Ex: Hering"
                 placeholderTextColor={theme.textMuted}
-                keyboardType="phone-pad"
               />
             </View>
           </View>
 
-          {/* Grid: Nome + CPF */}
+          {/* Preço e origem */}
           <View style={s.row}>
             <View style={[s.fieldGroup, s.flex1]}>
-              <Text style={s.label}>Seu nome</Text>
+              <Text style={s.label}>Preço</Text>
               <TextInput
                 style={s.input}
-                value={donorName}
-                onChangeText={setDonorName}
-                placeholder="Nome completo"
+                value={price}
+                onChangeText={setPrice}
+                placeholder="0,00"
                 placeholderTextColor={theme.textMuted}
-                autoCapitalize="words"
+                keyboardType="decimal-pad"
               />
             </View>
             <View style={[s.fieldGroup, s.flex1]}>
-              <Text style={s.label}>CPF</Text>
+              <Text style={s.label}>CEP de origem</Text>
               <TextInput
                 style={s.input}
-                value={cpf}
-                onChangeText={(v) => setCpf(maskCPF(v))}
-                placeholder="000.000.000-00"
+                value={originZip}
+                onChangeText={setOriginZip}
+                placeholder="00000-000"
                 placeholderTextColor={theme.textMuted}
                 keyboardType="numeric"
               />
@@ -195,18 +215,18 @@ export default function DonationScreen({ onBack }) {
 
           {/* Upload de foto */}
           <View style={s.fieldGroup}>
-            <Text style={s.label}>Foto do produto (opcional)</Text>
+            <Text style={s.label}>Fotos do produto (até 4, opcional)</Text>
             <TouchableOpacity style={s.photoBtn} onPress={pickImage} activeOpacity={0.8}>
-              {photo ? (
-                <Image source={{ uri: photo }} style={s.photoPreview} />
-              ) : (
+              {photos.length === 0 ? (
                 <View style={s.photoPlaceholder}>
                   <Text style={s.photoPlaceholderIcon}>📷</Text>
                   <Text style={s.photoPlaceholderText}>Toque para adicionar foto</Text>
                 </View>
-              )}
+              ) : <View style={s.photosRow}>{photos.map((item, index) => <View key={item.uri} style={s.photoItem}><Image source={{ uri: item.uri }} style={s.photoPreview} /><TouchableOpacity onPress={() => removePhoto(index)} style={s.removePhoto}><Text style={s.removePhotoText}>×</Text></TouchableOpacity></View>)}{photos.length < 4 && <View style={s.addPhoto}><Text style={s.photoPlaceholderIcon}>＋</Text></View>}</View>}
             </TouchableOpacity>
           </View>
+
+          {!!error && <Text style={s.errorText}>{error}</Text>}
 
           <TouchableOpacity
             style={[s.submitBtn, loading && s.submitBtnDisabled]}
@@ -299,7 +319,12 @@ const styles = (theme) => StyleSheet.create({
 
   // Foto
   photoBtn: { alignSelf: 'flex-start' },
+  photosRow: { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  photoItem: { position: 'relative' },
   photoPreview: { width: 120, height: 120, borderRadius: 12 },
+  removePhoto: { position: 'absolute', top: 4, right: 4, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(0,0,0,0.7)', alignItems: 'center', justifyContent: 'center' },
+  removePhotoText: { color: '#fff', fontSize: 20, lineHeight: 22 },
+  addPhoto: { width: 120, height: 120, borderRadius: 12, borderWidth: 2, borderColor: theme.border, borderStyle: 'dashed', alignItems: 'center', justifyContent: 'center' },
   photoPlaceholder: {
     width: 120, height: 120, borderRadius: 12,
     borderWidth: 2, borderColor: theme.border, borderStyle: 'dashed',
@@ -318,6 +343,7 @@ const styles = (theme) => StyleSheet.create({
   },
   submitBtnDisabled: { opacity: 0.7 },
   submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
+  errorText: { color: '#c44150', fontSize: 13, textAlign: 'center' },
 
   // Card como funciona
   howCard: {

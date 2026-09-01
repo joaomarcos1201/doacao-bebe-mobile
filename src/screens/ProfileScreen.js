@@ -1,15 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-
-const checks = [
-  { label: 'Letra maiúscula', test: (p) => /[A-Z]/.test(p) },
-  { label: 'Caractere especial', test: (p) => /[^a-zA-Z0-9]/.test(p) },
-  { label: 'Número', test: (p) => /[0-9]/.test(p) },
-];
 
 const TIPS = [
   'Use uma senha forte com pelo menos 8 caracteres',
@@ -17,28 +11,13 @@ const TIPS = [
   'Nunca compartilhe sua senha com outras pessoas',
 ];
 
-const MOCK_ANUNCIOS = [
-  { id: 1, name: 'Macacão Azul 3-6m', category: 'Roupas', condition: 'Ótimo estado', status: 'Ativo' },
-  { id: 2, name: 'Carrinho de Bebê', category: 'Acessórios', condition: 'Bom estado', status: 'Ativo' },
-  { id: 3, name: 'Berço de Madeira', category: 'Móveis', condition: 'Usado', status: 'Encerrado' },
-];
-
-export default function ProfileScreen({ onBack, user, onProductPress }) {
+export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLoading, onSellerFeature }) {
   const { theme, toggleTheme } = useTheme();
-  const [name, setName] = useState(user?.name ?? '');
-  const [email, setEmail] = useState(user?.email ?? '');
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const name = user?.name || user?.nome || '';
+  const email = user?.email || '';
   const s = styles(theme);
 
   const initial = name.trim().charAt(0).toUpperCase() || '?';
-
-  const handleSave = () => {
-    setLoading(true);
-    setTimeout(() => setLoading(false), 1500);
-  };
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -72,10 +51,7 @@ export default function ProfileScreen({ onBack, user, onProductPress }) {
               <TextInput
                 style={s.input}
                 value={name}
-                onChangeText={setName}
-                placeholder="Seu nome"
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize="words"
+                editable={false}
               />
             </View>
             <View style={[s.fieldGroup, s.flex1]}>
@@ -83,122 +59,15 @@ export default function ProfileScreen({ onBack, user, onProductPress }) {
               <TextInput
                 style={s.input}
                 value={email}
-                onChangeText={setEmail}
-                placeholder="seu@email.com"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
+                editable={false}
               />
             </View>
           </View>
 
-          {/* Seção alterar senha */}
-          <View style={s.passwordSection}>
-            <Text style={s.passwordSectionTitle}>Alterar Senha</Text>
-
-            <View style={s.fieldGroup}>
-              <Text style={s.label}>Senha atual</Text>
-              <TextInput
-                style={s.input}
-                value={currentPassword}
-                onChangeText={setCurrentPassword}
-                placeholder="••••••••"
-                placeholderTextColor={theme.textMuted}
-                secureTextEntry
-              />
-            </View>
-
-            <View style={s.row}>
-              <View style={[s.fieldGroup, s.flex1]}>
-                <Text style={s.label}>Nova senha</Text>
-                <TextInput
-                  style={s.input}
-                  value={newPassword}
-                  onChangeText={setNewPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor={theme.textMuted}
-                  secureTextEntry
-                />
-                {newPassword.length > 0 && (
-                  <View style={s.passwordChecks}>
-                    {checks.map((c) => {
-                      const ok = c.test(newPassword);
-                      return (
-                        <View key={c.label} style={s.checkRow}>
-                          <Text style={[s.checkIcon, { color: ok ? '#3aaa6e' : '#e05555' }]}>
-                            {ok ? '✓' : '✗'}
-                          </Text>
-                          <Text style={[s.checkLabel, { color: ok ? '#3aaa6e' : '#e05555' }]}>
-                            {c.label}
-                          </Text>
-                        </View>
-                      );
-                    })}
-                  </View>
-                )}
-              </View>
-              <View style={[s.fieldGroup, s.flex1]}>
-                <Text style={s.label}>Confirmar senha</Text>
-                <TextInput
-                  style={[
-                    s.input,
-                    confirmPassword.length > 0 && {
-                      borderColor: confirmPassword === newPassword ? '#3aaa6e' : '#e05555',
-                    },
-                  ]}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  placeholder="••••••••"
-                  placeholderTextColor={theme.textMuted}
-                  secureTextEntry
-                />
-                {confirmPassword.length > 0 && (
-                  <Text style={{ fontSize: 11, color: confirmPassword === newPassword ? '#3aaa6e' : '#e05555', marginTop: 4 }}>
-                    {confirmPassword === newPassword ? '✓ Senhas coincidem' : '✗ Senhas diferentes'}
-                  </Text>
-                )}
-              </View>
-            </View>
-          </View>
-
-          <TouchableOpacity
-            style={[s.saveBtn, loading && s.saveBtnDisabled]}
-            onPress={handleSave}
-            disabled={loading}
-            activeOpacity={0.8}
-          >
-            <Text style={s.saveBtnText}>{loading ? 'Salvando...' : 'Salvar Alterações'}</Text>
-          </TouchableOpacity>
+          <Text style={s.readOnlyHint}>Dados carregados da sua conta.</Text>
         </View>
 
-        {/* Card meus anúncios */}
-        <View style={s.card}>
-          <Text style={s.cardTitle}>Meus Anúncios</Text>
-          {MOCK_ANUNCIOS.length === 0 ? (
-            <View style={s.emptyAds}>
-              <Text style={s.emptyAdsIcon}>📦</Text>
-              <Text style={s.emptyAdsText}>Você ainda não fez nenhuma doação.</Text>
-            </View>
-          ) : (
-            MOCK_ANUNCIOS.map((ad) => (
-              <TouchableOpacity key={ad.id} style={s.adCard} onPress={() => onProductPress?.(ad)} activeOpacity={0.7}>
-                <View style={s.adImageBox}>
-                  <Text style={s.adImageEmoji}>🎁</Text>
-                </View>
-                <View style={s.adInfo}>
-                  <Text style={s.adName} numberOfLines={1}>{ad.name}</Text>
-                  <Text style={s.adMeta}>{ad.category} · {ad.condition}</Text>
-                  <View style={[s.adStatusBadge, ad.status === 'Ativo' ? s.adStatusActive : s.adStatusClosed]}>
-                    <Text style={[s.adStatusText, { color: ad.status === 'Ativo' ? '#3aaa6e' : '#999' }]}>
-                      {ad.status === 'Ativo' ? '● Ativo' : '● Encerrado'}
-                    </Text>
-                  </View>
-                </View>
-              </TouchableOpacity>
-            ))
-          )}
-        </View>
+        {sellerLoading ? <View style={s.card}><Text style={s.cardTitle}>Verificando seus anúncios...</Text></View> : hasAnnouncements === true && <View style={s.card}><Text style={s.cardTitle}>Área do vendedor</Text><TouchableOpacity style={s.sellerLink} onPress={() => onSellerFeature?.('Minhas Vendas')}><Text style={s.sellerLinkText}>Minhas Vendas</Text></TouchableOpacity><TouchableOpacity style={s.sellerLink} onPress={() => onSellerFeature?.('Carteira')}><Text style={s.sellerLinkText}>Carteira</Text></TouchableOpacity></View>}
 
         {/* Card dicas de segurança */}
         <View style={s.card}>
@@ -252,6 +121,9 @@ const styles = (theme) => StyleSheet.create({
     gap: 16,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
+  readOnlyHint: { color: theme.textMuted, fontSize: 12 },
+  sellerLink: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
+  sellerLinkText: { color: theme.pink, fontSize: 14, fontWeight: '700' },
 
   row: { flexDirection: 'row', gap: 12 },
   flex1: { flex: 1 },

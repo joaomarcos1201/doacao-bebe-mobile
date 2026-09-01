@@ -10,14 +10,23 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
   const s = styles(theme);
 
   const handleLogin = async () => {
+    if (!email.trim() || !password) {
+      setError('Informe seu email e sua senha.');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
+    setError('');
+    try {
+      await onLoginSuccess?.(email, password);
+    } catch (err) {
+      setError(err.message || 'Não foi possível entrar.');
+    } finally {
       setLoading(false);
-      onLoginSuccess?.({ name: 'Usuário', isAdmin: false });
-    }, 1500);
+    }
   };
 
   return (
@@ -73,6 +82,7 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
           >
             <Text style={s.loginBtnText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
           </TouchableOpacity>
+          {!!error && <Text style={s.errorText}>{error}</Text>}
 
           {/* Links */}
           <TouchableOpacity onPress={onRegister} activeOpacity={0.7}>
@@ -145,4 +155,5 @@ const styles = (theme) => StyleSheet.create({
   registerLink: { fontSize: 13, color: theme.textMuted, marginBottom: 10 },
   registerLinkBold: { color: theme.pink, fontWeight: '700' },
   forgotLink: { fontSize: 13, color: theme.textMuted },
+  errorText: { color: '#c44150', fontSize: 13, textAlign: 'center', marginBottom: 12 },
 });

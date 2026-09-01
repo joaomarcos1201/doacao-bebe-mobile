@@ -19,7 +19,7 @@ const checks = [
   { label: 'Número', test: (p) => /[0-9]/.test(p) },
 ];
 
-export default function RegisterScreen({ onBack, onLoginRedirect }) {
+export default function RegisterScreen({ onBack, onLoginRedirect, onRegister }) {
   const { theme } = useTheme();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -27,15 +27,28 @@ export default function RegisterScreen({ onBack, onLoginRedirect }) {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [error, setError] = useState('');
   const s = styles(theme);
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
+    if (!name.trim() || !email.trim() || cpf.replace(/\D/g, '').length !== 11 || !password) {
+      setError('Preencha nome, email, CPF e senha corretamente.');
+      return;
+    }
+    if (!/[A-Z]/.test(password) || !/[^a-zA-Z0-9]/.test(password) || !/[0-9]/.test(password)) {
+      setError('A senha deve conter letra maiúscula, número e caractere especial.');
+      return;
+    }
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    setError('');
+    try {
+      await onRegister?.(name, email, cpf, password);
       setSuccess(true);
-      setTimeout(() => onLoginRedirect?.(), 3000);
-    }, 1500);
+    } catch (err) {
+      setError(err.message || 'Não foi possível criar sua conta.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (success) {
@@ -142,6 +155,7 @@ export default function RegisterScreen({ onBack, onLoginRedirect }) {
           >
             <Text style={s.registerBtnText}>{loading ? 'Criando conta...' : 'Criar conta'}</Text>
           </TouchableOpacity>
+          {!!error && <Text style={s.errorText}>{error}</Text>}
 
           <TouchableOpacity onPress={onLoginRedirect} activeOpacity={0.7}>
             <Text style={s.loginLink}>
@@ -211,4 +225,5 @@ const styles = (theme) => StyleSheet.create({
   successIcon: { fontSize: 64 },
   successTitle: { fontSize: 22, fontWeight: '800', color: theme.pink },
   successSubtitle: { fontSize: 14, color: theme.textMuted },
+  errorText: { color: '#c44150', fontSize: 13, textAlign: 'center', marginBottom: 12 },
 });

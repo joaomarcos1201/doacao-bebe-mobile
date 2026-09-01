@@ -1,13 +1,13 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 
 const TABS = [
-  { key: 'home', label: 'Início', icon: '🏠' },
-  { key: 'explore', label: 'Explorar', icon: '🔍' },
-  { key: 'donate', label: 'Anunciar', icon: '🎁' },
-  { key: 'chat', label: 'Chat', icon: '💬' },
-  { key: 'menu', label: 'Menu', icon: '☰' },
+  { key: 'home', label: 'Início', icon: 'home-outline', activeIcon: 'home' },
+  { key: 'explore', label: 'Explorar', icon: 'search-outline', activeIcon: 'search' },
+  { key: 'donate', label: 'Anunciar', icon: 'add-circle-outline', activeIcon: 'add-circle' },
+  { key: 'menu', label: 'Menu', icon: 'menu-outline', activeIcon: 'menu' },
 ];
 
 export default function BottomBar({ activeTab, onTabPress, onMenuOpen }) {
@@ -25,8 +25,14 @@ export default function BottomBar({ activeTab, onTabPress, onMenuOpen }) {
             style={s.tab}
             onPress={() => isMenu ? onMenuOpen?.() : onTabPress?.(tab.key)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={tab.label}
           >
-            <Text style={[s.icon, isActive && s.iconActive]}>{tab.icon}</Text>
+            <Ionicons
+              name={isActive ? tab.activeIcon : tab.icon}
+              size={22}
+              color={isActive ? theme.pink : theme.textMuted}
+            />
             <Text style={[s.label, isActive && s.labelActive]}>{tab.label}</Text>
             {isActive && <View style={s.activeDot} />}
           </TouchableOpacity>
@@ -49,8 +55,6 @@ const styles = (theme) => StyleSheet.create({
     flex: 1, alignItems: 'center', justifyContent: 'center',
     paddingVertical: 4, gap: 2, position: 'relative',
   },
-  icon: { fontSize: 22 },
-  iconActive: {},
   label: { fontSize: 10, color: theme.textMuted, fontWeight: '500' },
   labelActive: { color: theme.pink, fontWeight: '700' },
   activeDot: {

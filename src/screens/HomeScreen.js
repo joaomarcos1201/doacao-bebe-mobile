@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View, Text, TouchableOpacity, StyleSheet,
-  ScrollView, Dimensions, FlatList,
+  ActivityIndicator, Image, View, Text, TouchableOpacity, StyleSheet,
+  ScrollView, Dimensions, RefreshControl,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { getApiErrorMessage, productApi } from '../services/api';
+import FavoriteButton from '../components/FavoriteButton';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
@@ -24,26 +26,43 @@ const HOW_IT_WORKS = [
   { num: '3', icon: '💝', title: 'Ajude quem precisa', desc: 'Faça a diferença com um gesto de amor.' },
 ];
 
-const MOCK_PRODUCTS = [
-  { id: 1, name: 'Macacão Azul 3-6m', category: 'Roupas', condition: 'Ótimo estado', desc: 'Macacão de algodão, lavado e higienizado.' },
-  { id: 2, name: 'Carrinho de Bebê', category: 'Acessórios', condition: 'Bom estado', desc: 'Carrinho dobrável com alça ajustável.' },
-  { id: 3, name: 'Berço de Madeira', category: 'Móveis', condition: 'Usado', desc: 'Berço com grade removível, colchão incluso.' },
-  { id: 4, name: 'Kit Brinquedos', category: 'Brinquedos', condition: 'Ótimo estado', desc: 'Chocalhos, mordedores e brinquedos de banho.' },
-  { id: 5, name: 'Body Branco 0-3m', category: 'Roupas', condition: 'Ótimo estado', desc: 'Body de algodão, tamanho recém-nascido.' },
-  { id: 6, name: 'Cadeirinha de Balanço', category: 'Acessórios', condition: 'Bom estado', desc: 'Cadeirinha com vibração e melodias.' },
-];
+const PUBLIC_STATUSES = ['ATIVO', 'DISPONIVEL', 'APROVADO'];
+const imageUri = (value) => value ? `data:image/jpeg;base64,${value}` : null;
 
-export default function HomeScreen({ onDonate }) {
+export default function HomeScreen({ onDonate, onProductPress }) {
   const { theme } = useTheme();
   const [activeCategory, setActiveCategory] = useState('Todos');
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState('');
   const s = styles(theme);
 
+  const loadProducts = useCallback(async (isRefresh = false) => {
+    if (isRefresh) setRefreshing(true); else setLoading(true);
+    setError('');
+    try {
+      const response = await productApi.list();
+      setProducts((response.data || []).filter((product) =>
+        PUBLIC_STATUSES.includes(String(product.statusAnuncio || '').toUpperCase())
+        && String(product.statusVisibilidade || '').toUpperCase() !== 'REMOVIDO'
+      ));
+    } catch (requestError) {
+      setError(getApiErrorMessage(requestError, 'Não foi possível carregar os produtos.'));
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
+
+  useEffect(() => { loadProducts(); }, [loadProducts]);
+
   const filtered = activeCategory === 'Todos'
-    ? MOCK_PRODUCTS
-    : MOCK_PRODUCTS.filter(p => p.category === activeCategory);
+    ? products
+    : products.filter(p => p.categoria === activeCategory);
 
   return (
-    <ScrollView style={s.container} showsVerticalScrollIndicator={false}>
+    <ScrollView style={s.container} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadProducts(true)} tintColor={theme.pink} />}>
 
       {/* Hero compacto */}
       <View style={s.hero}>
@@ -103,28 +122,33 @@ export default function HomeScreen({ onDonate }) {
         <Text style={s.sectionSubtitle}>{filtered.length} itens encontrados</Text>
       </View>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <View style={s.empty}><ActivityIndicator size="large" color={theme.pink} /><Text style={s.emptyText}>Carregando produtos...</Text></View>
+      ) : error ? (
+        <View style={s.empty}><Text style={s.emptyText}>{error}</Text><TouchableOpacity onPress={() => loadProducts()}><Text style={s.retryText}>Tentar novamente</Text></TouchableOpacity></View>
+      ) : filtered.length === 0 ? (
         <View style={s.empty}>
           <Text style={s.emptyText}>Nenhum item nessa categoria.</Text>
         </View>
       ) : (
         <View style={s.productsGrid}>
           {filtered.map((product, index) => (
-            <View key={product.id} style={[s.productCard, index % 2 === 0 ? { marginRight: 8 } : { marginLeft: 8 }]}>
-              <View style={s.productImage} />
+            <TouchableOpacity key={product.id} style={[s.productCard, index % 2 === 0 ? { marginRight: 8 } : { marginLeft: 8 }]} onPress={() => onProductPress?.(product.id)} activeOpacity={0.8}>
+              <View style={s.imageWrap}>{imageUri(product.foto) ? <Image source={{ uri: imageUri(product.foto) }} style={s.productImage} /> : <View style={s.productImage}><Text style={s.productImageEmoji}>🎁</Text></View>}<FavoriteButton productId={product.id} style={s.favoriteButton} /></View>
               <View style={s.productInfo}>
                 <View style={s.productBadges}>
                   <View style={s.productBadge}>
-                    <Text style={s.productBadgeText}>{product.condition}</Text>
+                    <Text style={s.productBadgeText}>{product.conservacao || 'Disponível'}</Text>
                   </View>
                 </View>
-                <Text style={s.productName} numberOfLines={1}>{product.name}</Text>
-                <Text style={s.productDesc} numberOfLines={2}>{product.desc}</Text>
-                <TouchableOpacity style={s.productBtn} activeOpacity={0.8}>
+                <Text style={s.productName} numberOfLines={1}>{product.nome}</Text>
+                <Text style={s.productDesc} numberOfLines={2}>{product.descricao || 'Sem descrição.'}</Text>
+                {!!product.preco && <Text style={s.productPrice}>R$ {Number(product.preco).toFixed(2).replace('.', ',')}</Text>}
+                <View style={s.productBtn}>
                   <Text style={s.productBtnText}>Ver Detalhes</Text>
-                </TouchableOpacity>
+                </View>
               </View>
-            </View>
+            </TouchableOpacity>
           ))}
         </View>
       )}
@@ -240,6 +264,8 @@ const styles = (theme) => StyleSheet.create({
     backgroundColor: theme.pinkLight,
     alignItems: 'center', justifyContent: 'center',
   },
+  imageWrap: { position: 'relative' },
+  favoriteButton: { position: 'absolute', top: 8, right: 8 },
   productImageEmoji: { fontSize: 44 },
   productInfo: { padding: 10 },
   productBadges: { flexDirection: 'row', marginBottom: 4 },
@@ -255,11 +281,13 @@ const styles = (theme) => StyleSheet.create({
     paddingVertical: 7, alignItems: 'center',
   },
   productBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
+  productPrice: { color: theme.pink, fontSize: 14, fontWeight: '800', marginBottom: 8 },
 
   // Empty
   empty: { alignItems: 'center', paddingVertical: 48 },
   emptyIcon: { fontSize: 40, marginBottom: 8 },
   emptyText: { color: theme.textMuted, fontSize: 14 },
+  retryText: { color: theme.pink, fontWeight: '700', fontSize: 14, marginTop: 10 },
 
   // Footer
   footer: {
