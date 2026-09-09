@@ -9,18 +9,43 @@ export const ThemeProvider = ({ children }) => {
 
   const theme = {
     isDark,
-    bg: isDark ? darkColors.card : colors.card,
-    bgSecondary: isDark ? darkColors.pinkLight : colors.backgroundAlt,
-    card: isDark ? darkColors.card : colors.card,
-    text: isDark ? darkColors.text : colors.text,
+
+    // Fundos
+    bg: isDark ? darkColors.background : colors.background,
+    bgAlt: isDark ? darkColors.backgroundAlt : colors.backgroundAlt,
+    bgHome: isDark ? darkColors.background : colors.backgroundHome,
+    surface: isDark ? darkColors.surface : colors.surface,
+    surfaceSoft: isDark ? darkColors.surfaceSoft : '#fdf8f9',
+
+    // Cards
+    card: isDark ? darkColors.surface : colors.surface,
+    cardBorder: isDark ? darkColors.border : colors.cardBorder,
+
+    // Inputs
+    input: isDark ? darkColors.input : '#fdf0f2',
+    inputBorder: isDark ? darkColors.borderInput : '#e8d0d4',
+
+    // Texto
+    text: isDark ? darkColors.textBody : colors.textBody,
+    textTitle: isDark ? darkColors.textPrimary : colors.textPrimary,
     textMuted: isDark ? darkColors.textSecondary : colors.textSecondary,
-    border: isDark ? darkColors.border : colors.border,
-    pink: colors.primary,
-    pinkLight: isDark ? darkColors.pinkLight : colors.pinkLight,
-    input: isDark ? darkColors.input : colors.card,
+    textTertiary: isDark ? darkColors.textTertiary : colors.textTertiary,
+
+    // Bordas
+    border: isDark ? darkColors.border : colors.cardBorder,
+
+    // Marca
+    pink: isDark ? darkColors.primary : colors.primary,
+    pinkMedium: colors.primaryMedium,
+    pinkLight: isDark ? darkColors.pinkSurface : '#FFF0F2',
+    pinkSurface: isDark ? 'rgba(192,96,106,0.12)' : 'rgba(192,96,106,0.08)',
+
+    // Estados
     success: colors.success,
+    successAlt: colors.successAlt,
     warning: colors.warning,
     error: colors.error,
+    info: colors.info,
   };
 
   return (

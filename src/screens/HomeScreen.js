@@ -1,33 +1,45 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  ActivityIndicator, Image, View, Text, TouchableOpacity, StyleSheet,
+  ActivityIndicator, Image, View, Text, Pressable, StyleSheet,
   ScrollView, Dimensions, RefreshControl,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getApiErrorMessage, productApi } from '../services/api';
 import FavoriteButton from '../components/FavoriteButton';
+import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const { width } = Dimensions.get('window');
 const CARD_WIDTH = (width - 48) / 2;
 
 const CATEGORIES = [
-  { label: 'Todos' },
-  { label: 'Roupas' },
-  { label: 'Brinquedos' },
-  { label: 'Móveis' },
-  { label: 'Acessórios' },
-  { label: 'Alimentação' },
-  { label: 'Outros' },
+  { label: 'Todos', icon: 'grid-outline' },
+  { label: 'Roupas', icon: 'shirt-outline' },
+  { label: 'Brinquedos', icon: 'game-controller-outline' },
+  { label: 'Móveis', icon: 'bed-outline' },
+  { label: 'Acessórios', icon: 'bag-outline' },
+  { label: 'Alimentação', icon: 'nutrition-outline' },
+  { label: 'Outros', icon: 'ellipsis-horizontal-outline' },
 ];
 
-const HOW_IT_WORKS = [
-  { num: '1', icon: '📦', title: 'Doe itens', desc: 'Cadastre produtos que seu bebê não usa mais.' },
-  { num: '2', icon: '👨‍👩‍👧', title: 'Encontre famílias', desc: 'Conecte-se com famílias da sua região.' },
-  { num: '3', icon: '💝', title: 'Ajude quem precisa', desc: 'Faça a diferença com um gesto de amor.' },
+const FEATURES = [
+  { icon: 'pricetag-outline', title: 'Preços acessíveis', desc: 'Peças com ótimo custo-benefício' },
+  { icon: 'shield-checkmark-outline', title: 'Compra segura', desc: 'Anúncios verificados com cuidado' },
+  { icon: 'people-outline', title: 'Comunidade de pais', desc: 'Encontre tudo para o bebê com facilidade' },
 ];
 
 const PUBLIC_STATUSES = ['ATIVO', 'DISPONIVEL', 'APROVADO'];
 const imageUri = (value) => value ? `data:image/jpeg;base64,${value}` : null;
+
+const formatTime = (dateStr) => {
+  if (!dateStr) return '';
+  const diff = (Date.now() - new Date(dateStr)) / 1000;
+  if (diff < 60) return 'agora mesmo';
+  if (diff < 3600) return `há ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `há ${Math.floor(diff / 3600)}h`;
+  if (diff < 172800) return 'ontem';
+  return `há ${Math.floor(diff / 86400)} dias`;
+};
 
 export default function HomeScreen({ onDonate, onProductPress }) {
   const { theme } = useTheme();
@@ -43,12 +55,12 @@ export default function HomeScreen({ onDonate, onProductPress }) {
     setError('');
     try {
       const response = await productApi.list();
-      setProducts((response.data || []).filter((product) =>
-        PUBLIC_STATUSES.includes(String(product.statusAnuncio || '').toUpperCase())
-        && String(product.statusVisibilidade || '').toUpperCase() !== 'REMOVIDO'
+      setProducts((response.data || []).filter((p) =>
+        PUBLIC_STATUSES.includes(String(p.statusAnuncio || '').toUpperCase())
+        && String(p.statusVisibilidade || '').toUpperCase() !== 'REMOVIDO'
       ));
-    } catch (requestError) {
-      setError(getApiErrorMessage(requestError, 'Não foi possível carregar os produtos.'));
+    } catch (err) {
+      setError(getApiErrorMessage(err, 'Não foi possível carregar os produtos.'));
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -61,99 +73,154 @@ export default function HomeScreen({ onDonate, onProductPress }) {
     ? products
     : products.filter(p => p.categoria === activeCategory);
 
-  return (
-    <ScrollView style={s.container} showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadProducts(true)} tintColor={theme.pink} />}>
+  const count = filtered.length;
+  const countLabel = count === 1 ? `${count} item encontrado` : `${count} itens encontrados`;
 
-      {/* Hero compacto */}
+  return (
+    <ScrollView
+      style={s.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => loadProducts(true)} tintColor={colors.primary} />}
+    >
+      {/* Hero */}
       <View style={s.hero}>
-        <View style={s.heroCircle1} />
-        <View style={s.heroCircle2} />
-        <View style={s.heroLeft}>
-          <View style={s.badge}>
-            <Text style={s.badgeText}>DOAÇÕES PARA BEBÊS</Text>
-          </View>
-          <Text style={s.heroTitle}>
-            Conectando quem doa com{' '}
-            <Text style={s.heroTitleItalic}>quem precisa</Text>
-          </Text>
-          <Text style={s.heroSubtitle}>
-            Itens gratuitos de famílias da sua região.
-          </Text>
-          <TouchableOpacity style={s.heroBtn} activeOpacity={0.8} onPress={onDonate}>
-            <Text style={s.heroBtnText}>Quero doar</Text>
-          </TouchableOpacity>
-          <View style={s.features}>
-            {['Gratuito', 'Seguro', 'Solidário'].map((f, i) => (
-              <View key={i} style={s.featureChip}>
-                <Text style={s.featureChipText}>✓ {f}</Text>
-              </View>
-            ))}
+        <View style={s.heroDecor1} />
+        <View style={s.heroDecor2} />
+        <View style={s.heroBadgeRow}>
+          <View style={s.heroBadge}>
+            <Ionicons name="heart" size={10} color={colors.primary} />
+            <Text style={s.heroBadgeText}>ALÉM DO POSITIVO</Text>
           </View>
         </View>
-        <View style={s.heroRight} />
+        <Text style={s.heroTitle}>
+          Encontre roupas e acessórios{'\n'}
+          <Text style={s.heroTitleAccent}>para o seu bebê</Text>
+        </Text>
+        <Text style={s.heroSubtitle}>
+          Descubra peças lindas, confortáveis e com ótimo preço em sua região.
+        </Text>
+        <Pressable
+          style={({ pressed }) => [s.heroBtn, pressed && { opacity: 0.85 }]}
+          onPress={onDonate}
+        >
+          <Ionicons name="megaphone-outline" size={16} color="#fff" />
+          <Text style={s.heroBtnText}>Anunciar Produto</Text>
+        </Pressable>
+        <View style={s.featuresRow}>
+          {FEATURES.map((f, i) => (
+            <View key={i} style={s.featureItem}>
+              <Ionicons name={f.icon} size={14} color={colors.primary} />
+              <Text style={s.featureText}>{f.title}</Text>
+            </View>
+          ))}
+        </View>
       </View>
 
       {/* Categorias */}
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        contentContainerStyle={s.categoriesContent}
-        style={s.categoriesScroll}
+        contentContainerStyle={s.catsContent}
+        style={s.catsScroll}
       >
-        {CATEGORIES.map((cat) => (
-          <TouchableOpacity
-            key={cat.label}
-            style={[s.catBtn, activeCategory === cat.label && s.catBtnActive]}
-            onPress={() => setActiveCategory(cat.label)}
-            activeOpacity={0.7}
-          >
-            <Text style={[s.catLabel, activeCategory === cat.label && s.catLabelActive]}>
-              {cat.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+        {CATEGORIES.map((cat) => {
+          const active = activeCategory === cat.label;
+          return (
+            <Pressable
+              key={cat.label}
+              style={({ pressed }) => [s.catChip, active && s.catChipActive, pressed && { opacity: 0.8 }]}
+              onPress={() => setActiveCategory(cat.label)}
+            >
+              <Ionicons
+                name={cat.icon}
+                size={14}
+                color={active ? '#fff' : theme.textMuted}
+              />
+              <Text style={[s.catLabel, active && s.catLabelActive]}>{cat.label}</Text>
+            </Pressable>
+          );
+        })}
       </ScrollView>
 
-
-
-      {/* Grid de produtos 2 colunas */}
+      {/* Seção produtos */}
       <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Doações disponíveis</Text>
-        <Text style={s.sectionSubtitle}>{filtered.length} itens encontrados</Text>
+        <Text style={s.sectionTitle}>Produtos disponíveis</Text>
+        {!loading && <Text style={s.sectionCount}>{countLabel}</Text>}
       </View>
 
       {loading ? (
-        <View style={s.empty}><ActivityIndicator size="large" color={theme.pink} /><Text style={s.emptyText}>Carregando produtos...</Text></View>
+        <View style={s.stateWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={s.stateText}>Carregando produtos...</Text>
+        </View>
       ) : error ? (
-        <View style={s.empty}><Text style={s.emptyText}>{error}</Text><TouchableOpacity onPress={() => loadProducts()}><Text style={s.retryText}>Tentar novamente</Text></TouchableOpacity></View>
+        <View style={s.stateWrap}>
+          <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+          <Text style={s.stateText}>{error}</Text>
+          <Pressable onPress={() => loadProducts()} style={s.retryBtn}>
+            <Text style={s.retryText}>Tentar novamente</Text>
+          </Pressable>
+        </View>
       ) : filtered.length === 0 ? (
-        <View style={s.empty}>
-          <Text style={s.emptyText}>Nenhum item nessa categoria.</Text>
+        <View style={s.stateWrap}>
+          <Ionicons name="search-outline" size={40} color={theme.textMuted} />
+          <Text style={s.stateText}>Nenhum item encontrado</Text>
+          <Text style={[s.stateText, { fontSize: typography.label }]}>Tente ajustar os filtros ou a pesquisa</Text>
         </View>
       ) : (
-        <View style={s.productsGrid}>
+        <View style={s.grid}>
           {filtered.map((product, index) => (
-            <TouchableOpacity key={product.id} style={[s.productCard, index % 2 === 0 ? { marginRight: 8 } : { marginLeft: 8 }]} onPress={() => onProductPress?.(product.id)} activeOpacity={0.8}>
-              <View style={s.imageWrap}>{imageUri(product.foto) ? <Image source={{ uri: imageUri(product.foto) }} style={s.productImage} /> : <View style={s.productImage}><Text style={s.productImageEmoji}>🎁</Text></View>}<FavoriteButton productId={product.id} style={s.favoriteButton} /></View>
-              <View style={s.productInfo}>
-                <View style={s.productBadges}>
-                  <View style={s.productBadge}>
-                    <Text style={s.productBadgeText}>{product.conservacao || 'Disponível'}</Text>
+            <Pressable
+              key={product.id}
+              style={({ pressed }) => [
+                s.card,
+                index % 2 === 0 ? { marginRight: spacing.sm } : { marginLeft: spacing.sm },
+                pressed && { opacity: 0.92 },
+              ]}
+              onPress={() => onProductPress?.(product.id)}
+            >
+              <View style={s.cardImageWrap}>
+                {imageUri(product.foto)
+                  ? <Image source={{ uri: imageUri(product.foto) }} style={s.cardImage} />
+                  : (
+                    <View style={[s.cardImage, s.cardImagePlaceholder]}>
+                      <Ionicons name="gift-outline" size={36} color={colors.primaryMedium} />
+                    </View>
+                  )
+                }
+                <FavoriteButton productId={product.id} style={s.favBtn} />
+                {!!product.statusAnuncio && product.statusAnuncio.toUpperCase() === 'RESERVADO' && (
+                  <View style={s.reservedBadge}>
+                    <Text style={s.reservedBadgeText}>Reservado</Text>
                   </View>
-                </View>
-                <Text style={s.productName} numberOfLines={1}>{product.nome}</Text>
-                <Text style={s.productDesc} numberOfLines={2}>{product.descricao || 'Sem descrição.'}</Text>
-                {!!product.preco && <Text style={s.productPrice}>R$ {Number(product.preco).toFixed(2).replace('.', ',')}</Text>}
-                <View style={s.productBtn}>
-                  <Text style={s.productBtnText}>Ver Detalhes</Text>
+                )}
+              </View>
+              <View style={s.cardBody}>
+                {!!product.conservacao && (
+                  <View style={s.conditionBadge}>
+                    <Text style={s.conditionBadgeText}>{product.conservacao}</Text>
+                  </View>
+                )}
+                <Text style={s.cardName} numberOfLines={1}>{product.nome}</Text>
+                <Text style={s.cardDesc} numberOfLines={2}>{product.descricao || 'Sem descrição.'}</Text>
+                {!!product.preco && (
+                  <Text style={s.cardPrice}>
+                    R$ {Number(product.preco).toFixed(2).replace('.', ',')}
+                  </Text>
+                )}
+                {!!product.dataAnuncio && (
+                  <Text style={s.cardTime}>{formatTime(product.dataAnuncio)}</Text>
+                )}
+                <View style={s.cardBtn}>
+                  <Text style={s.cardBtnText}>Ver Detalhes</Text>
                 </View>
               </View>
-            </TouchableOpacity>
+            </Pressable>
           ))}
         </View>
       )}
 
-
+      <View style={s.bottomPad} />
     </ScrollView>
   );
 }
@@ -163,140 +230,145 @@ const styles = (theme) => StyleSheet.create({
 
   // Hero
   hero: {
-    backgroundColor: theme.bgSecondary,
-    paddingHorizontal: 20,
-    paddingVertical: 24,
-    flexDirection: 'row',
-    alignItems: 'center',
+    backgroundColor: theme.isDark ? '#1a0a0c' : '#fff7f9',
+    paddingHorizontal: spacing.xl,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.xxl,
     overflow: 'hidden',
     position: 'relative',
+    gap: spacing.md,
   },
-  heroCircle1: { position: 'absolute', width: 180, height: 180, borderRadius: 90, backgroundColor: 'rgba(232,96,122,0.08)', top: -50, right: -50 },
-  heroCircle2: { position: 'absolute', width: 120, height: 120, borderRadius: 60, backgroundColor: 'rgba(232,96,122,0.06)', bottom: -30, left: -30 },
-  heroLeft: { flex: 1, zIndex: 1 },
-  badge: {
-    backgroundColor: 'rgba(232,96,122,0.15)',
+  heroDecor1: {
+    position: 'absolute', width: 200, height: 200, borderRadius: 100,
+    backgroundColor: 'rgba(192,96,106,0.07)', top: -60, right: -60,
+  },
+  heroDecor2: {
+    position: 'absolute', width: 140, height: 140, borderRadius: 70,
+    backgroundColor: 'rgba(232,138,162,0.06)', bottom: -40, left: -40,
+  },
+  heroBadgeRow: { flexDirection: 'row' },
+  heroBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: theme.pinkLight,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: radius.pill,
     alignSelf: 'flex-start',
-    paddingHorizontal: 10, paddingVertical: 4,
-    borderRadius: 20, marginBottom: 10,
   },
-  badgeText: { color: theme.pink, fontSize: 10, fontWeight: '700', letterSpacing: 0.5 },
-  heroTitle: { fontSize: 20, fontWeight: '800', color: theme.text, lineHeight: 28, marginBottom: 8 },
-  heroTitleItalic: { fontStyle: 'italic', color: theme.pink },
-  heroSubtitle: { fontSize: 12, color: theme.textMuted, lineHeight: 18, marginBottom: 14 },
+  heroBadgeText: {
+    color: colors.primary, fontSize: 10,
+    fontWeight: typography.extrabold, letterSpacing: 0.8,
+  },
+  heroTitle: {
+    fontSize: 22, fontWeight: typography.extrabold,
+    color: theme.textTitle, lineHeight: 30, letterSpacing: -0.5,
+  },
+  heroTitleAccent: { color: colors.primary },
+  heroSubtitle: {
+    fontSize: typography.label, color: theme.textMuted,
+    lineHeight: 20,
+  },
   heroBtn: {
-    backgroundColor: theme.pink,
-    paddingHorizontal: 18, paddingVertical: 10,
-    borderRadius: 22, alignSelf: 'flex-start',
-    shadowColor: theme.pink, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
-    marginBottom: 14,
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.xl, paddingVertical: 13,
+    borderRadius: radius.pill, alignSelf: 'flex-start',
+    ...shadows.cta,
   },
-  heroBtnText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  features: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
-  featureChip: {
-    backgroundColor: 'rgba(232,96,122,0.12)',
-    paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 12,
+  heroBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: typography.button },
+  featuresRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  featureItem: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: theme.pinkSurface,
+    paddingHorizontal: spacing.sm, paddingVertical: 4,
+    borderRadius: radius.pill,
   },
-  featureChipText: { color: theme.pink, fontSize: 11, fontWeight: '600' },
-  heroRight: {
-    width: 90, height: 90,
-    backgroundColor: 'rgba(232,96,122,0.12)',
-    borderRadius: 28,
-    alignItems: 'center', justifyContent: 'center',
-    marginLeft: 16,
-  },
-  heroEmoji: { fontSize: 44 },
+  featureText: { color: colors.primary, fontSize: 11, fontWeight: typography.semibold },
 
   // Categorias
-  categoriesScroll: { borderBottomWidth: 1, borderBottomColor: theme.border },
-  categoriesContent: { paddingHorizontal: 16, paddingVertical: 10, gap: 8 },
-  catBtn: {
+  catsScroll: { borderBottomWidth: 1, borderBottomColor: theme.border },
+  catsContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm, gap: spacing.sm },
+  catChip: {
     flexDirection: 'row', alignItems: 'center', gap: 5,
-    paddingHorizontal: 14, paddingVertical: 8,
-    borderRadius: 20, borderWidth: 1.5, borderColor: theme.border,
-    backgroundColor: theme.bg,
+    paddingHorizontal: spacing.md, paddingVertical: 8,
+    borderRadius: radius.pill,
+    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.04)',
   },
-  catBtnActive: { borderColor: theme.pink, backgroundColor: 'rgba(232,96,122,0.1)' },
-  catIcon: { fontSize: 14 },
-  catLabel: { fontSize: 13, color: theme.textMuted, fontWeight: '500' },
-  catLabelActive: { color: theme.pink, fontWeight: '700' },
+  catChipActive: {
+    backgroundColor: colors.primary,
+    ...shadows.cta,
+  },
+  catLabel: { fontSize: typography.label, color: theme.textMuted, fontWeight: typography.medium },
+  catLabelActive: { color: '#fff', fontWeight: typography.bold },
 
   // Seção
-  sectionHeader: { paddingHorizontal: 16, paddingTop: 20, paddingBottom: 4 },
-  sectionTitle: { fontSize: 18, fontWeight: '800', color: theme.text },
-  sectionSubtitle: { fontSize: 12, color: theme.textMuted, marginTop: 2 },
-
-  // Como funciona
-  howContent: { paddingHorizontal: 16, paddingVertical: 12, gap: 12 },
-  howCard: {
-    width: 150,
-    backgroundColor: theme.card,
-    borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: theme.border,
-    alignItems: 'center',
+  sectionHeader: {
+    paddingHorizontal: spacing.lg, paddingTop: spacing.xl, paddingBottom: spacing.sm,
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
   },
-  howNum: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: theme.pink,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+  sectionTitle: {
+    fontSize: typography.cardTitle, fontWeight: typography.extrabold,
+    color: theme.textTitle, letterSpacing: -0.3,
   },
-  howNumText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  howIcon: { fontSize: 26, marginBottom: 6 },
-  howTitle: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 4, textAlign: 'center' },
-  howDesc: { fontSize: 11, color: theme.textMuted, textAlign: 'center', lineHeight: 16 },
+  sectionCount: { fontSize: typography.support, color: theme.textMuted },
 
-  // Grid 2 colunas
-  productsGrid: {
+  // Grid
+  grid: {
     flexDirection: 'row', flexWrap: 'wrap',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 4,
+    paddingHorizontal: spacing.lg, paddingBottom: spacing.sm,
   },
-  productCard: {
+  card: {
     width: CARD_WIDTH,
     backgroundColor: theme.card,
-    borderRadius: 16, borderWidth: 1,
-    borderColor: theme.border,
-    overflow: 'hidden', marginBottom: 16,
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: theme.cardBorder,
+    overflow: 'hidden',
+    marginBottom: spacing.lg,
+    ...shadows.light,
   },
-  productImage: {
-    height: 120,
+  cardImageWrap: { position: 'relative' },
+  cardImage: { height: 130, width: '100%' },
+  cardImagePlaceholder: {
     backgroundColor: theme.pinkLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  imageWrap: { position: 'relative' },
-  favoriteButton: { position: 'absolute', top: 8, right: 8 },
-  productImageEmoji: { fontSize: 44 },
-  productInfo: { padding: 10 },
-  productBadges: { flexDirection: 'row', marginBottom: 4 },
-  productBadge: {
-    backgroundColor: 'rgba(72,187,120,0.15)',
-    paddingHorizontal: 7, paddingVertical: 2, borderRadius: 8,
+  favBtn: { position: 'absolute', top: 8, right: 8 },
+  reservedBadge: {
+    position: 'absolute', bottom: 8, left: 8,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    paddingHorizontal: 8, paddingVertical: 3,
+    borderRadius: radius.pill,
   },
-  productBadgeText: { fontSize: 10, color: '#2d8a5e', fontWeight: '600' },
-  productName: { fontSize: 13, fontWeight: '700', color: theme.text, marginBottom: 3 },
-  productDesc: { fontSize: 11, color: theme.textMuted, lineHeight: 16, marginBottom: 8 },
-  productBtn: {
-    backgroundColor: theme.pink, borderRadius: 10,
-    paddingVertical: 7, alignItems: 'center',
+  reservedBadgeText: { color: '#fff', fontSize: 10, fontWeight: typography.bold },
+  cardBody: { padding: spacing.sm, gap: 4 },
+  conditionBadge: {
+    backgroundColor: 'rgba(22,163,74,0.1)',
+    paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: radius.pill, alignSelf: 'flex-start',
   },
-  productBtnText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  productPrice: { color: theme.pink, fontSize: 14, fontWeight: '800', marginBottom: 8 },
+  conditionBadgeText: { fontSize: 10, color: colors.successAlt, fontWeight: typography.bold },
+  cardName: {
+    fontSize: typography.label, fontWeight: typography.bold,
+    color: theme.text, letterSpacing: -0.2,
+  },
+  cardDesc: { fontSize: 11, color: theme.textMuted, lineHeight: 16 },
+  cardPrice: {
+    color: colors.primary, fontSize: typography.button,
+    fontWeight: typography.extrabold,
+  },
+  cardTime: { fontSize: 10, color: theme.textTertiary },
+  cardBtn: {
+    backgroundColor: colors.primary,
+    borderRadius: radius.sm, paddingVertical: 8,
+    alignItems: 'center', marginTop: 4,
+  },
+  cardBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: 12 },
 
-  // Empty
-  empty: { alignItems: 'center', paddingVertical: 48 },
-  emptyIcon: { fontSize: 40, marginBottom: 8 },
-  emptyText: { color: theme.textMuted, fontSize: 14 },
-  retryText: { color: theme.pink, fontWeight: '700', fontSize: 14, marginTop: 10 },
+  // Estados
+  stateWrap: { alignItems: 'center', paddingVertical: 48, gap: spacing.sm },
+  stateText: { color: theme.textMuted, fontSize: typography.body, textAlign: 'center' },
+  retryBtn: { marginTop: spacing.sm },
+  retryText: { color: colors.primary, fontWeight: typography.bold, fontSize: typography.body },
 
-  // Footer
-  footer: {
-    padding: 24, alignItems: 'center',
-    borderTopWidth: 1, borderTopColor: theme.border,
-    gap: 8, marginTop: 8,
-  },
-  footerText: { color: theme.textMuted, fontSize: 12 },
-  footerLinks: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  footerLink: { color: theme.pink, fontSize: 12 },
-  footerSep: { color: theme.textMuted },
+  bottomPad: { height: spacing.xl },
 });

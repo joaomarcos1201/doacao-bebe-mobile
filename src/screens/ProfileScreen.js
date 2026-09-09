@@ -1,9 +1,12 @@
 import React from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, StyleSheet,
+  View, Text, TextInput, Pressable, StyleSheet,
   KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import ScreenHeader from '../components/ScreenHeader';
+import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const TIPS = [
   'Use uma senha forte com pelo menos 8 caracteres',
@@ -12,25 +15,15 @@ const TIPS = [
 ];
 
 export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLoading, onSellerFeature }) {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const name = user?.name || user?.nome || '';
   const email = user?.email || '';
-  const s = styles(theme);
-
   const initial = name.trim().charAt(0).toUpperCase() || '?';
+  const s = styles(theme);
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      {/* Navbar */}
-      <View style={s.navbar}>
-        <TouchableOpacity onPress={onBack} activeOpacity={0.7}>
-          <Text style={s.backBtn}>← Voltar</Text>
-        </TouchableOpacity>
-        <Text style={s.navTitle}>Meu Perfil</Text>
-        <TouchableOpacity onPress={toggleTheme} activeOpacity={0.7}>
-          <Text style={s.themeBtn}>{theme.isDark ? '☀️' : '🌙'}</Text>
-        </TouchableOpacity>
-      </View>
+      <ScreenHeader title="Meu Perfil" onBack={onBack} backLabel="Voltar" />
 
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Avatar */}
@@ -39,37 +32,61 @@ export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLo
             <Text style={s.avatarInitial}>{initial}</Text>
           </View>
           <Text style={s.avatarName}>{name || 'Usuário'}</Text>
-          <Text style={s.avatarEmail}>{email || 'sem email'}</Text>
+          <Text style={s.avatarEmail}>{email || '—'}</Text>
+          <View style={s.memberBadge}>
+            <Ionicons name="shield-checkmark-outline" size={12} color={colors.primary} />
+            <Text style={s.memberBadgeText}>Membro da plataforma</Text>
+          </View>
         </View>
 
-        {/* Card dados pessoais */}
+        {/* Dados pessoais */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Dados Pessoais</Text>
-          <View style={s.row}>
-            <View style={[s.fieldGroup, s.flex1]}>
-              <Text style={s.label}>Nome</Text>
-              <TextInput
-                style={s.input}
-                value={name}
-                editable={false}
-              />
-            </View>
-            <View style={[s.fieldGroup, s.flex1]}>
-              <Text style={s.label}>Email</Text>
-              <TextInput
-                style={s.input}
-                value={email}
-                editable={false}
-              />
+          <View style={s.fieldGroup}>
+            <Text style={s.label}>Nome</Text>
+            <View style={s.inputWrap}>
+              <Ionicons name="person-outline" size={15} color={theme.textMuted} />
+              <TextInput style={s.input} value={name} editable={false} />
             </View>
           </View>
-
+          <View style={s.fieldGroup}>
+            <Text style={s.label}>Email</Text>
+            <View style={s.inputWrap}>
+              <Ionicons name="mail-outline" size={15} color={theme.textMuted} />
+              <TextInput style={s.input} value={email} editable={false} />
+            </View>
+          </View>
           <Text style={s.readOnlyHint}>Dados carregados da sua conta.</Text>
         </View>
 
-        {sellerLoading ? <View style={s.card}><Text style={s.cardTitle}>Verificando seus anúncios...</Text></View> : hasAnnouncements === true && <View style={s.card}><Text style={s.cardTitle}>Área do vendedor</Text><TouchableOpacity style={s.sellerLink} onPress={() => onSellerFeature?.('Minhas Vendas')}><Text style={s.sellerLinkText}>Minhas Vendas</Text></TouchableOpacity><TouchableOpacity style={s.sellerLink} onPress={() => onSellerFeature?.('Carteira')}><Text style={s.sellerLinkText}>Carteira</Text></TouchableOpacity></View>}
+        {/* Área do vendedor */}
+        {sellerLoading ? (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Verificando seus anúncios...</Text>
+          </View>
+        ) : hasAnnouncements === true && (
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Área do Vendedor</Text>
+            {[
+              { label: 'Minhas Vendas', icon: 'storefront-outline' },
+              { label: 'Carteira', icon: 'wallet-outline' },
+            ].map((item) => (
+              <Pressable
+                key={item.label}
+                style={({ pressed }) => [s.sellerLink, pressed && s.sellerLinkPressed]}
+                onPress={() => onSellerFeature?.(item.label)}
+              >
+                <View style={s.sellerLinkIcon}>
+                  <Ionicons name={item.icon} size={18} color={colors.primary} />
+                </View>
+                <Text style={s.sellerLinkText}>{item.label}</Text>
+                <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        )}
 
-        {/* Card dicas de segurança */}
+        {/* Dicas de segurança */}
         <View style={s.card}>
           <Text style={s.cardTitle}>Dicas de Segurança</Text>
           {TIPS.map((tip, i) => (
@@ -81,111 +98,69 @@ export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLo
             </View>
           ))}
         </View>
+
+        <View style={{ height: spacing.xxl }} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
 }
 
 const styles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' },
+  container: { flex: 1, backgroundColor: theme.bg },
+  scroll: { padding: spacing.lg, gap: spacing.lg },
 
-  navbar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12,
-    backgroundColor: theme.bg, borderBottomWidth: 1, borderBottomColor: theme.border,
-  },
-  backBtn: { color: theme.pink, fontSize: 15, fontWeight: '600' },
-  navTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
-  themeBtn: { fontSize: 20 },
-
-  scroll: { padding: 16, gap: 16 },
-
-  // Avatar
-  avatarSection: { alignItems: 'center', paddingVertical: 8, gap: 6 },
+  avatarSection: { alignItems: 'center', paddingVertical: spacing.lg, gap: spacing.sm },
   avatar: {
-    width: 80, height: 80, borderRadius: 40,
-    backgroundColor: theme.pink,
+    width: 88, height: 88, borderRadius: 44,
+    backgroundColor: colors.primary,
     alignItems: 'center', justifyContent: 'center',
-    shadowColor: theme.pink, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35, shadowRadius: 8, elevation: 5,
+    ...shadows.cta,
   },
-  avatarInitial: { color: '#fff', fontSize: 32, fontWeight: '700' },
-  avatarName: { fontSize: 18, fontWeight: '700', color: theme.text },
-  avatarEmail: { fontSize: 13, color: theme.textMuted },
+  avatarInitial: { color: '#fff', fontSize: 36, fontWeight: typography.bold },
+  avatarName: { fontSize: typography.cardTitle, fontWeight: typography.extrabold, color: theme.textTitle, letterSpacing: -0.3 },
+  avatarEmail: { fontSize: typography.label, color: theme.textMuted },
+  memberBadge: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: theme.pinkLight, paddingHorizontal: spacing.sm,
+    paddingVertical: 4, borderRadius: radius.pill,
+  },
+  memberBadgeText: { color: colors.primary, fontSize: 11, fontWeight: typography.semibold },
 
-  // Card
   card: {
-    backgroundColor: theme.card, borderRadius: 20, padding: 24,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07, shadowRadius: 12, elevation: 4,
-    gap: 16,
+    backgroundColor: theme.card, borderRadius: radius.xl,
+    padding: spacing.xl, gap: spacing.md,
+    borderWidth: 1, borderColor: theme.cardBorder, ...shadows.light,
   },
-  cardTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
-  readOnlyHint: { color: theme.textMuted, fontSize: 12 },
-  sellerLink: { paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border },
-  sellerLinkText: { color: theme.pink, fontSize: 14, fontWeight: '700' },
+  cardTitle: { fontSize: typography.button, fontWeight: typography.extrabold, color: theme.textTitle, letterSpacing: -0.2 },
+  readOnlyHint: { color: theme.textMuted, fontSize: typography.support },
 
-  row: { flexDirection: 'row', gap: 12 },
-  flex1: { flex: 1 },
-  fieldGroup: { gap: 6 },
-  label: { fontSize: 13, fontWeight: '600', color: theme.text },
-  input: {
-    backgroundColor: theme.isDark ? '#1a1a1a' : '#fdf0f2',
-    borderWidth: 1, borderColor: theme.isDark ? '#333' : '#e8d0d4',
-    borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10,
-    fontSize: 13, color: theme.text,
+  fieldGroup: { gap: spacing.xs },
+  label: { fontSize: typography.label, fontWeight: typography.semibold, color: theme.text },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: theme.input, borderWidth: 1.5, borderColor: theme.inputBorder,
+    borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 11,
+    opacity: 0.8,
   },
+  input: { flex: 1, fontSize: typography.body, color: theme.text, paddingVertical: 0 },
 
-  // Seção senha
-  passwordSection: {
-    backgroundColor: theme.isDark ? 'rgba(255,255,255,0.04)' : 'rgba(232,96,122,0.04)',
-    borderRadius: 14, padding: 16, gap: 12,
-    borderWidth: 1, borderColor: theme.border,
+  sellerLink: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.md,
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1, borderBottomColor: theme.border,
   },
-  passwordSectionTitle: { fontSize: 14, fontWeight: '700', color: theme.text },
-  passwordChecks: { marginTop: 6, gap: 3 },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  checkIcon: { fontSize: 12, fontWeight: '700' },
-  checkLabel: { fontSize: 11 },
+  sellerLinkPressed: { opacity: 0.7 },
+  sellerLinkIcon: {
+    width: 36, height: 36, borderRadius: radius.sm,
+    backgroundColor: theme.pinkLight, alignItems: 'center', justifyContent: 'center',
+  },
+  sellerLinkText: { flex: 1, fontSize: typography.button, fontWeight: typography.semibold, color: theme.text },
 
-  // Botão salvar
-  saveBtn: {
-    backgroundColor: theme.pink, paddingVertical: 14,
-    borderRadius: 12, alignItems: 'center',
-    shadowColor: theme.pink, shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  saveBtnDisabled: { opacity: 0.7 },
-  saveBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-
-  // Anúncios
-  emptyAds: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  emptyAdsIcon: { fontSize: 36 },
-  emptyAdsText: { fontSize: 13, color: theme.textMuted },
-  adCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border,
-  },
-  adImageBox: {
-    width: 52, height: 52, borderRadius: 12,
-    backgroundColor: theme.pinkLight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  adImageEmoji: { fontSize: 24 },
-  adInfo: { flex: 1, gap: 3 },
-  adName: { fontSize: 14, fontWeight: '700', color: theme.text },
-  adMeta: { fontSize: 12, color: theme.textMuted },
-  adStatusBadge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  adStatusActive: { backgroundColor: 'rgba(58,170,110,0.12)' },
-  adStatusClosed: { backgroundColor: 'rgba(150,150,150,0.12)' },
-  adStatusText: { fontSize: 11, fontWeight: '600' },
-
-  // Dicas
-  tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
+  tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   tipNum: {
-    width: 26, height: 26, borderRadius: 13,
-    backgroundColor: theme.pink, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center', flexShrink: 0,
   },
-  tipNumText: { color: '#fff', fontWeight: '700', fontSize: 12 },
-  tipText: { flex: 1, fontSize: 13, color: theme.textMuted, lineHeight: 20, paddingTop: 3 },
+  tipNumText: { color: '#fff', fontWeight: typography.bold, fontSize: typography.support },
+  tipText: { flex: 1, fontSize: typography.label, color: theme.textMuted, lineHeight: 20, paddingTop: 4 },
 });

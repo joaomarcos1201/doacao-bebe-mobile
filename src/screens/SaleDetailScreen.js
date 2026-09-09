@@ -1,15 +1,22 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import {
+  ActivityIndicator, Image, RefreshControl, ScrollView,
+  StyleSheet, Text, Pressable, View,
+} from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getApiErrorMessage, orderApi } from '../services/api';
+import ScreenHeader from '../components/ScreenHeader';
+import StatusBadge from '../components/StatusBadge';
+import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const imageUri = (value) => value ? `data:image/jpeg;base64,${value}` : null;
 const money = (value) => `R$ ${Number(value || 0).toFixed(2).replace('.', ',')}`;
-const valueOrFallback = (value) => value || 'Não informado';
-const date = (value) => value ? new Date(value).toLocaleString('pt-BR') : 'Não informado';
+const dateStr = (value) => value ? new Date(value).toLocaleString('pt-BR') : 'Não informado';
+const fallback = (value) => value || 'Não informado';
 
 export default function SaleDetailScreen({ onBack, saleId }) {
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const [sale, setSale] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -20,16 +27,120 @@ export default function SaleDetailScreen({ onBack, saleId }) {
     if (refresh) setRefreshing(true); else setLoading(true);
     setError('');
     try { setSale((await orderApi.getById(saleId)).data); }
-    catch (requestError) { setError(requestError.response?.status === 404 ? 'Venda não encontrada.' : getApiErrorMessage(requestError, 'Não foi possível carregar a venda.')); }
+    catch (err) {
+      setError(err.response?.status === 404
+        ? 'Venda não encontrada.'
+        : getApiErrorMessage(err, 'Não foi possível carregar a venda.'));
+    }
     finally { setLoading(false); setRefreshing(false); }
   }, [saleId]);
 
   useEffect(() => { load(); }, [load]);
-  const info = (label, value) => <View style={s.infoRow} key={label}><Text style={s.infoLabel}>{label}</Text><Text style={s.infoValue}>{valueOrFallback(value)}</Text></View>;
 
-  return <View style={s.container}><View style={s.navbar}><TouchableOpacity onPress={onBack}><Text style={s.back}>← Vendas</Text></TouchableOpacity><Text style={s.title}>Detalhes da Venda</Text><TouchableOpacity onPress={toggleTheme}><Text style={s.theme}>{theme.isDark ? '☀️' : '🌙'}</Text></TouchableOpacity></View>{loading ? <View style={s.state}><ActivityIndicator size="large" color={theme.pink} /><Text style={s.muted}>Carregando venda...</Text></View> : error ? <View style={s.state}><Text style={s.error}>{error}</Text><TouchableOpacity onPress={() => load()}><Text style={s.retry}>Tentar novamente</Text></TouchableOpacity></View> : <ScrollView contentContainerStyle={s.scroll} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={theme.pink} />}><View style={s.productCard}>{imageUri(sale?.produto?.foto) ? <Image source={{ uri: imageUri(sale.produto.foto) }} style={s.image} /> : <View style={[s.image, s.placeholder]}><Text style={s.placeholderText}>🎁</Text></View>}<View style={s.productInfo}><Text style={s.orderId}>Pedido #{sale?.id}</Text><Text style={s.productName}>{sale?.produto?.nome || 'Produto não disponível'}</Text></View></View><View style={s.card}><Text style={s.cardTitle}>Comprador e status</Text>{info('Comprador', sale?.comprador?.nome)}{info('Pagamento', sale?.statusPagamento)}{info('Envio', sale?.statusEnvio)}</View><View style={s.card}><Text style={s.cardTitle}>Valores</Text>{info('Produto', money(sale?.valorProduto))}{info('Frete', money(sale?.valorFrete))}{info('Total', money(sale?.valorTotal))}</View><View style={s.card}><Text style={s.cardTitle}>Entrega e pedido</Text>{info('Data do pedido', date(sale?.createdAt))}{info('Código de rastreio', sale?.codigoRastreio)}{info('Transportadora', sale?.transportadora)}</View></ScrollView>}</View>;
+  const InfoRow = ({ label, value }) => (
+    <View style={s.infoRow}>
+      <Text style={s.infoLabel}>{label}</Text>
+      <Text style={s.infoValue}>{fallback(value)}</Text>
+    </View>
+  );
+
+  return (
+    <View style={s.container}>
+      <ScreenHeader title="Detalhes da Venda" onBack={onBack} backLabel="Vendas" />
+
+      {loading ? (
+        <View style={s.stateWrap}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={s.stateText}>Carregando venda...</Text>
+        </View>
+      ) : error ? (
+        <View style={s.stateWrap}>
+          <Ionicons name="alert-circle-outline" size={40} color={colors.error} />
+          <Text style={s.stateText}>{error}</Text>
+          <Pressable onPress={() => load()} style={s.retryBtn}>
+            <Text style={s.retryText}>Tentar novamente</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <ScrollView
+          contentContainerStyle={s.scroll}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={colors.primary} />}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Produto */}
+          <View style={s.productCard}>
+            {imageUri(sale?.produto?.foto)
+              ? <Image source={{ uri: imageUri(sale.produto.foto) }} style={s.image} />
+              : <View style={[s.image, s.imagePlaceholder]}><Ionicons name="gift-outline" size={28} color={colors.primaryMedium} /></View>
+            }
+            <View style={s.productInfo}>
+              <Text style={s.orderId}>Pedido #{sale?.id}</Text>
+              <Text style={s.productName}>{sale?.produto?.nome || 'Produto não disponível'}</Text>
+              <StatusBadge status={sale?.statusPagamento} label={sale?.statusPagamento || 'Não informado'} />
+            </View>
+          </View>
+
+          {/* Comprador e status */}
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Comprador e Status</Text>
+            <InfoRow label="Comprador" value={sale?.comprador?.nome} />
+            <InfoRow label="Pagamento" value={sale?.statusPagamento} />
+            <InfoRow label="Envio" value={sale?.statusEnvio} />
+          </View>
+
+          {/* Valores */}
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Valores</Text>
+            <InfoRow label="Produto" value={money(sale?.valorProduto)} />
+            <InfoRow label="Frete" value={money(sale?.valorFrete)} />
+            <View style={[s.infoRow, { borderBottomWidth: 0 }]}>
+              <Text style={[s.infoLabel, { color: theme.text, fontWeight: typography.extrabold }]}>Total</Text>
+              <Text style={[s.infoValue, { color: colors.primary, fontWeight: typography.black }]}>{money(sale?.valorTotal)}</Text>
+            </View>
+          </View>
+
+          {/* Entrega */}
+          <View style={s.card}>
+            <Text style={s.cardTitle}>Entrega e Pedido</Text>
+            <InfoRow label="Data do pedido" value={dateStr(sale?.createdAt)} />
+            <InfoRow label="Código de rastreio" value={sale?.codigoRastreio} />
+            <InfoRow label="Transportadora" value={sale?.transportadora} />
+          </View>
+
+          <View style={{ height: spacing.xxl }} />
+        </ScrollView>
+      )}
+    </View>
+  );
 }
 
 const styles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }, navbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 16, backgroundColor: theme.bg, borderBottomWidth: 1, borderBottomColor: theme.border }, back: { color: theme.pink, fontWeight: '700' }, title: { color: theme.text, fontSize: 16, fontWeight: '800' }, theme: { fontSize: 20 }, scroll: { padding: 16, gap: 12 }, productCard: { flexDirection: 'row', alignItems: 'center', gap: 14, backgroundColor: theme.card, borderRadius: 18, padding: 14 }, image: { width: 84, height: 84, borderRadius: 12 }, placeholder: { backgroundColor: theme.pinkLight, alignItems: 'center', justifyContent: 'center' }, placeholderText: { fontSize: 30 }, productInfo: { flex: 1, gap: 6 }, orderId: { color: theme.textMuted, fontSize: 12 }, productName: { color: theme.text, fontSize: 18, fontWeight: '800' }, card: { backgroundColor: theme.card, borderRadius: 18, padding: 18, gap: 12 }, cardTitle: { color: theme.text, fontSize: 16, fontWeight: '800' }, infoRow: { flexDirection: 'row', justifyContent: 'space-between', gap: 16, borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: 8 }, infoLabel: { color: theme.textMuted, fontSize: 14, flex: 1 }, infoValue: { color: theme.text, fontSize: 14, fontWeight: '700', flex: 1, textAlign: 'right' }, state: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 32, gap: 10 }, muted: { color: theme.textMuted, fontSize: 14 }, error: { color: '#c43d54', textAlign: 'center', fontWeight: '600' }, retry: { color: theme.pink, fontWeight: '800' },
+  container: { flex: 1, backgroundColor: theme.bg },
+  scroll: { padding: spacing.lg, gap: spacing.md },
+  stateWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl, gap: spacing.sm },
+  stateText: { color: theme.textMuted, fontSize: typography.body, textAlign: 'center' },
+  retryBtn: { marginTop: spacing.sm },
+  retryText: { color: colors.primary, fontWeight: typography.bold },
+  productCard: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.lg,
+    backgroundColor: theme.card, borderRadius: radius.xl,
+    padding: spacing.lg, borderWidth: 1, borderColor: theme.cardBorder, ...shadows.light,
+  },
+  image: { width: 84, height: 84, borderRadius: radius.md },
+  imagePlaceholder: { backgroundColor: theme.pinkLight, alignItems: 'center', justifyContent: 'center' },
+  productInfo: { flex: 1, gap: spacing.sm },
+  orderId: { color: theme.textMuted, fontSize: typography.support },
+  productName: { color: theme.text, fontSize: typography.cardTitle, fontWeight: typography.extrabold, letterSpacing: -0.3 },
+  card: {
+    backgroundColor: theme.card, borderRadius: radius.xl,
+    padding: spacing.xl, gap: spacing.sm,
+    borderWidth: 1, borderColor: theme.cardBorder, ...shadows.light,
+  },
+  cardTitle: { fontSize: typography.button, fontWeight: typography.extrabold, color: theme.textTitle, marginBottom: spacing.xs },
+  infoRow: {
+    flexDirection: 'row', justifyContent: 'space-between', gap: spacing.lg,
+    borderBottomWidth: 1, borderBottomColor: theme.border, paddingBottom: spacing.sm,
+  },
+  infoLabel: { color: theme.textMuted, fontSize: typography.label, flex: 1 },
+  infoValue: { color: theme.text, fontSize: typography.label, fontWeight: typography.bold, flex: 1, textAlign: 'right' },
 });

@@ -1,7 +1,8 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const TABS = [
   { key: 'home', label: 'Início', icon: 'home-outline', activeIcon: 'home' },
@@ -20,22 +21,22 @@ export default function BottomBar({ activeTab, onTabPress, onMenuOpen }) {
         const isActive = activeTab === tab.key;
         const isMenu = tab.key === 'menu';
         return (
-          <TouchableOpacity
+          <Pressable
             key={tab.key}
-            style={s.tab}
+            style={({ pressed }) => [s.tab, pressed && s.tabPressed]}
             onPress={() => isMenu ? onMenuOpen?.() : onTabPress?.(tab.key)}
-            activeOpacity={0.7}
             accessibilityRole="button"
             accessibilityLabel={tab.label}
           >
-            <Ionicons
-              name={isActive ? tab.activeIcon : tab.icon}
-              size={22}
-              color={isActive ? theme.pink : theme.textMuted}
-            />
+            <View style={[s.iconWrap, isActive && s.iconWrapActive]}>
+              <Ionicons
+                name={isActive ? tab.activeIcon : tab.icon}
+                size={22}
+                color={isActive ? colors.primary : theme.textMuted}
+              />
+            </View>
             <Text style={[s.label, isActive && s.labelActive]}>{tab.label}</Text>
-            {isActive && <View style={s.activeDot} />}
-          </TouchableOpacity>
+          </Pressable>
         );
       })}
     </View>
@@ -45,21 +46,32 @@ export default function BottomBar({ activeTab, onTabPress, onMenuOpen }) {
 const styles = (theme) => StyleSheet.create({
   container: {
     flexDirection: 'row',
-    backgroundColor: theme.bg,
+    backgroundColor: theme.card,
     borderTopWidth: 1,
     borderTopColor: theme.border,
-    paddingBottom: 8,
-    paddingTop: 8,
+    paddingBottom: spacing.sm,
+    paddingTop: spacing.xs,
+    ...shadows.light,
   },
   tab: {
     flex: 1, alignItems: 'center', justifyContent: 'center',
-    paddingVertical: 4, gap: 2, position: 'relative',
+    paddingVertical: spacing.xs, gap: 3,
   },
-  label: { fontSize: 10, color: theme.textMuted, fontWeight: '500' },
-  labelActive: { color: theme.pink, fontWeight: '700' },
-  activeDot: {
-    position: 'absolute', bottom: -4,
-    width: 4, height: 4, borderRadius: 2,
-    backgroundColor: theme.pink,
+  tabPressed: { opacity: 0.7 },
+  iconWrap: {
+    width: 40, height: 32, borderRadius: radius.md,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconWrapActive: {
+    backgroundColor: theme.pinkLight,
+  },
+  label: {
+    fontSize: 10,
+    color: theme.textMuted,
+    fontWeight: typography.medium,
+  },
+  labelActive: {
+    color: colors.primary,
+    fontWeight: typography.bold,
   },
 });

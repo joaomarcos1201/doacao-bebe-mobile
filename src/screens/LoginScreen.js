@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput, Pressable,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLoginSuccess }) {
   const { theme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [emailFocused, setEmailFocused] = useState(false);
+  const [passFocused, setPassFocused] = useState(false);
   const s = styles(theme);
 
   const handleLogin = async () => {
@@ -35,64 +40,97 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={s.backBtnText}>← Voltar</Text>
-        </TouchableOpacity>
+        {onBack && (
+          <Pressable style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.7 }]} onPress={onBack}>
+            <Ionicons name="arrow-back" size={18} color={colors.primary} />
+            <Text style={s.backText}>Voltar</Text>
+          </Pressable>
+        )}
 
         <View style={s.card}>
           {/* Logo */}
-          <View style={s.logoCircle} />
-          <Text style={s.title}>Além do Positivo</Text>
+          <View style={s.logoWrap}>
+            <View style={s.logoCircle}>
+              <Ionicons name="heart" size={28} color={colors.primary} />
+            </View>
+          </View>
+          <Text style={s.brand}>Além do Positivo</Text>
           <Text style={s.subtitle}>Faça login para continuar</Text>
 
           {/* Campos */}
           <View style={s.fields}>
             <View style={s.fieldGroup}>
               <Text style={s.label}>Email</Text>
-              <TextInput
-                style={s.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="seu@email.com"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+              <View style={[s.inputWrap, emailFocused && s.inputWrapFocused]}>
+                <Ionicons name="mail-outline" size={16} color={emailFocused ? colors.primary : theme.textMuted} />
+                <TextInput
+                  style={s.input}
+                  value={email}
+                  onChangeText={setEmail}
+                  placeholder="seu@email.com"
+                  placeholderTextColor={colors.textPlaceholder}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onFocus={() => setEmailFocused(true)}
+                  onBlur={() => setEmailFocused(false)}
+                />
+              </View>
             </View>
+
             <View style={s.fieldGroup}>
               <Text style={s.label}>Senha</Text>
-              <TextInput
-                style={s.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor={theme.textMuted}
-                secureTextEntry
-              />
+              <View style={[s.inputWrap, passFocused && s.inputWrapFocused]}>
+                <Ionicons name="lock-closed-outline" size={16} color={passFocused ? colors.primary : theme.textMuted} />
+                <TextInput
+                  style={s.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textPlaceholder}
+                  secureTextEntry={!showPassword}
+                  onFocus={() => setPassFocused(true)}
+                  onBlur={() => setPassFocused(false)}
+                />
+                <Pressable onPress={() => setShowPassword(p => !p)} hitSlop={8}>
+                  <Ionicons
+                    name={showPassword ? 'eye-off-outline' : 'eye-outline'}
+                    size={16}
+                    color={theme.textMuted}
+                  />
+                </Pressable>
+              </View>
             </View>
           </View>
 
-          {/* Botão entrar */}
-          <TouchableOpacity
-            style={[s.loginBtn, loading && s.loginBtnDisabled]}
+          {!!error && (
+            <View style={s.errorBox}>
+              <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+              <Text style={s.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <Pressable
+            style={({ pressed }) => [s.loginBtn, loading && s.loginBtnDisabled, pressed && { opacity: 0.85 }]}
             onPress={handleLogin}
             disabled={loading}
-            activeOpacity={0.8}
           >
-            <Text style={s.loginBtnText}>{loading ? 'Entrando...' : 'Entrar'}</Text>
-          </TouchableOpacity>
-          {!!error && <Text style={s.errorText}>{error}</Text>}
+            {loading
+              ? <Ionicons name="reload-outline" size={18} color="#fff" />
+              : <Text style={s.loginBtnText}>Entrar</Text>
+            }
+          </Pressable>
 
-          {/* Links */}
-          <TouchableOpacity onPress={onRegister} activeOpacity={0.7}>
-            <Text style={s.registerLink}>
-              Não tem conta? <Text style={s.registerLinkBold}>Cadastre-se</Text>
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={onForgotPassword} activeOpacity={0.7}>
-            <Text style={s.forgotLink}>Esqueci minha senha</Text>
-          </TouchableOpacity>
+          <View style={s.links}>
+            <Pressable onPress={onRegister}>
+              <Text style={s.linkText}>
+                Não tem conta? <Text style={s.linkBold}>Cadastre-se</Text>
+              </Text>
+            </Pressable>
+            <Pressable onPress={onForgotPassword}>
+              <Text style={s.forgotText}>Esqueci minha senha</Text>
+            </Pressable>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -100,60 +138,67 @@ export default function LoginScreen({ onBack, onRegister, onForgotPassword, onLo
 }
 
 const styles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  backBtn: { position: 'absolute', top: 16, left: 20 },
-  backBtnText: { color: theme.pink, fontSize: 15, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: theme.bg },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
+  backBtn: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    marginBottom: spacing.xl,
+  },
+  backText: { color: colors.primary, fontSize: typography.button, fontWeight: typography.bold },
   card: {
     backgroundColor: theme.card,
-    borderRadius: 20,
-    padding: 32,
-    maxWidth: 400,
-    width: '100%',
-    alignSelf: 'center',
+    borderRadius: radius.xxl,
+    padding: spacing.xxxl,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 6,
+    ...shadows.strong,
   },
+  logoWrap: { marginBottom: spacing.md },
   logoCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    borderWidth: 2, borderColor: '#e8a0a8',
-    backgroundColor: 'rgba(232,96,122,0.1)',
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 2, borderColor: colors.primaryMedium,
+    backgroundColor: theme.pinkLight,
     alignItems: 'center', justifyContent: 'center',
-    marginBottom: 12,
   },
-  logoEmoji: { fontSize: 30 },
-  title: { fontSize: 20, fontWeight: '800', color: theme.pink, marginBottom: 4 },
-  subtitle: { fontSize: 13, color: theme.textMuted, marginBottom: 28 },
-  fields: { width: '100%', gap: 16, marginBottom: 24 },
-  fieldGroup: { gap: 6 },
-  label: { fontSize: 13, fontWeight: '600', color: theme.text },
-  input: {
-    backgroundColor: theme.isDark ? '#1a1a1a' : '#fdf0f2',
-    borderWidth: 1,
-    borderColor: theme.isDark ? '#333' : '#e8d0d4',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 14,
-    color: theme.text,
+  brand: {
+    fontSize: typography.authTitle,
+    fontWeight: typography.extrabold,
+    color: colors.primary,
+    letterSpacing: -0.5,
+    marginBottom: 4,
   },
+  subtitle: { fontSize: typography.label, color: theme.textMuted, marginBottom: spacing.xxl },
+  fields: { width: '100%', gap: spacing.lg, marginBottom: spacing.xl },
+  fieldGroup: { gap: spacing.xs },
+  label: { fontSize: typography.label, fontWeight: typography.semibold, color: theme.text },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: theme.input,
+    borderWidth: 1.5, borderColor: theme.inputBorder,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md, paddingVertical: 12,
+  },
+  inputWrapFocused: { borderColor: colors.primary },
+  input: { flex: 1, fontSize: typography.body, color: theme.text, paddingVertical: 0 },
+  errorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.errorBg,
+    borderWidth: 1, borderColor: colors.errorBorder,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    width: '100%', marginBottom: spacing.md,
+  },
+  errorText: { color: colors.errorText, fontSize: typography.label, flex: 1 },
   loginBtn: {
-    backgroundColor: theme.pink,
-    width: '100%', paddingVertical: 14,
-    borderRadius: 12, alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: theme.pink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    backgroundColor: colors.primary,
+    width: '100%', paddingVertical: 15,
+    borderRadius: radius.md, alignItems: 'center',
+    marginBottom: spacing.xl,
+    ...shadows.cta,
   },
   loginBtnDisabled: { opacity: 0.7 },
-  loginBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  registerLink: { fontSize: 13, color: theme.textMuted, marginBottom: 10 },
-  registerLinkBold: { color: theme.pink, fontWeight: '700' },
-  forgotLink: { fontSize: 13, color: theme.textMuted },
-  errorText: { color: '#c44150', fontSize: 13, textAlign: 'center', marginBottom: 12 },
+  loginBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: typography.button },
+  links: { alignItems: 'center', gap: spacing.sm },
+  linkText: { fontSize: typography.label, color: theme.textMuted },
+  linkBold: { color: colors.primary, fontWeight: typography.bold },
+  forgotText: { fontSize: typography.label, color: theme.textMuted },
 });

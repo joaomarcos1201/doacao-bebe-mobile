@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  View, Text, TextInput, Pressable,
   StyleSheet, KeyboardAvoidingView, Platform, ScrollView,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
+import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const maskCPF = (value) => {
   const digits = value.replace(/\D/g, '').slice(0, 11);
@@ -25,6 +27,7 @@ export default function RegisterScreen({ onBack, onLoginRedirect, onRegister }) 
   const [email, setEmail] = useState('');
   const [cpf, setCpf] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
@@ -36,7 +39,7 @@ export default function RegisterScreen({ onBack, onLoginRedirect, onRegister }) 
       return;
     }
     if (!/[A-Z]/.test(password) || !/[^a-zA-Z0-9]/.test(password) || !/[0-9]/.test(password)) {
-      setError('A senha deve conter letra maiúscula, número e caractere especial.');
+      setError('A senha não atende aos requisitos.');
       return;
     }
     setLoading(true);
@@ -54,91 +57,78 @@ export default function RegisterScreen({ onBack, onLoginRedirect, onRegister }) 
   if (success) {
     return (
       <View style={s.successContainer}>
-        <Text style={s.successIcon}>✅</Text>
+        <View style={s.successIconWrap}>
+          <Ionicons name="checkmark-circle" size={64} color={colors.success} />
+        </View>
         <Text style={s.successTitle}>Cadastro realizado!</Text>
-        <Text style={s.successSubtitle}>Redirecionando para o login...</Text>
+        <Text style={s.successSubtitle}>Bem-vindo(a)! Redirecionando para o login...</Text>
       </View>
     );
   }
 
   return (
-    <KeyboardAvoidingView
-      style={s.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
+    <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled">
-        <TouchableOpacity style={s.backBtn} onPress={onBack} activeOpacity={0.7}>
-          <Text style={s.backBtnText}>← Voltar</Text>
-        </TouchableOpacity>
+        <Pressable style={({ pressed }) => [s.backBtn, pressed && { opacity: 0.7 }]} onPress={onBack}>
+          <Ionicons name="arrow-back" size={18} color={colors.primary} />
+          <Text style={s.backText}>Voltar</Text>
+        </Pressable>
 
         <View style={s.card}>
           <View style={s.logoCircle}>
-            <Text style={s.logoEmoji}>🌸</Text>
+            <Ionicons name="heart" size={28} color={colors.primary} />
           </View>
-          <Text style={s.title}>Criar conta</Text>
+          <Text style={s.brand}>Criar conta</Text>
           <Text style={s.subtitle}>Além do Positivo</Text>
 
           <View style={s.fields}>
-            <View style={s.fieldGroup}>
-              <Text style={s.label}>Nome completo</Text>
-              <TextInput
-                style={s.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="Seu nome"
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize="words"
-              />
-            </View>
-
-            <View style={s.fieldGroup}>
-              <Text style={s.label}>Email</Text>
-              <TextInput
-                style={s.input}
-                value={email}
-                onChangeText={setEmail}
-                placeholder="seu@email.com"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
-            </View>
-
-            <View style={s.fieldGroup}>
-              <Text style={s.label}>CPF</Text>
-              <TextInput
-                style={s.input}
-                value={cpf}
-                onChangeText={(v) => setCpf(maskCPF(v))}
-                placeholder="000.000.000-00"
-                placeholderTextColor={theme.textMuted}
-                keyboardType="numeric"
-              />
-            </View>
+            {[
+              { label: 'Nome completo', value: name, onChange: setName, placeholder: 'Seu nome', icon: 'person-outline', autoCapitalize: 'words' },
+              { label: 'Email', value: email, onChange: setEmail, placeholder: 'seu@email.com', icon: 'mail-outline', keyboardType: 'email-address', autoCapitalize: 'none' },
+              { label: 'CPF', value: cpf, onChange: (v) => setCpf(maskCPF(v)), placeholder: '000.000.000-00', icon: 'card-outline', keyboardType: 'numeric' },
+            ].map((field) => (
+              <View key={field.label} style={s.fieldGroup}>
+                <Text style={s.label}>{field.label}</Text>
+                <View style={s.inputWrap}>
+                  <Ionicons name={field.icon} size={16} color={theme.textMuted} />
+                  <TextInput
+                    style={s.input}
+                    value={field.value}
+                    onChangeText={field.onChange}
+                    placeholder={field.placeholder}
+                    placeholderTextColor={colors.textPlaceholder}
+                    keyboardType={field.keyboardType}
+                    autoCapitalize={field.autoCapitalize || 'none'}
+                    autoCorrect={false}
+                  />
+                </View>
+              </View>
+            ))}
 
             <View style={s.fieldGroup}>
               <Text style={s.label}>Senha</Text>
-              <TextInput
-                style={s.input}
-                value={password}
-                onChangeText={setPassword}
-                placeholder="••••••••"
-                placeholderTextColor={theme.textMuted}
-                secureTextEntry
-              />
+              <View style={s.inputWrap}>
+                <Ionicons name="lock-closed-outline" size={16} color={theme.textMuted} />
+                <TextInput
+                  style={s.input}
+                  value={password}
+                  onChangeText={setPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={colors.textPlaceholder}
+                  secureTextEntry={!showPassword}
+                />
+                <Pressable onPress={() => setShowPassword(p => !p)} hitSlop={8}>
+                  <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={16} color={theme.textMuted} />
+                </Pressable>
+              </View>
               {password.length > 0 && (
-                <View style={s.passwordChecks}>
+                <View style={s.checksWrap}>
                   {checks.map((c) => {
                     const ok = c.test(password);
                     return (
                       <View key={c.label} style={s.checkRow}>
-                        <Text style={[s.checkIcon, { color: ok ? '#3aaa6e' : '#e05555' }]}>
-                          {ok ? '✓' : '✗'}
-                        </Text>
-                        <Text style={[s.checkLabel, { color: ok ? '#3aaa6e' : '#e05555' }]}>
-                          {c.label}
-                        </Text>
+                        <Ionicons name={ok ? 'checkmark-circle' : 'close-circle'} size={14} color={ok ? colors.successAlt : colors.error} />
+                        <Text style={[s.checkLabel, { color: ok ? colors.successAlt : colors.error }]}>{c.label}</Text>
                       </View>
                     );
                   })}
@@ -147,21 +137,24 @@ export default function RegisterScreen({ onBack, onLoginRedirect, onRegister }) 
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[s.registerBtn, loading && s.registerBtnDisabled]}
+          {!!error && (
+            <View style={s.errorBox}>
+              <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+              <Text style={s.errorText}>{error}</Text>
+            </View>
+          )}
+
+          <Pressable
+            style={({ pressed }) => [s.registerBtn, loading && s.btnDisabled, pressed && { opacity: 0.85 }]}
             onPress={handleRegister}
             disabled={loading}
-            activeOpacity={0.8}
           >
             <Text style={s.registerBtnText}>{loading ? 'Criando conta...' : 'Criar conta'}</Text>
-          </TouchableOpacity>
-          {!!error && <Text style={s.errorText}>{error}</Text>}
+          </Pressable>
 
-          <TouchableOpacity onPress={onLoginRedirect} activeOpacity={0.7}>
-            <Text style={s.loginLink}>
-              Já tem conta? <Text style={s.loginLinkBold}>Faça login</Text>
-            </Text>
-          </TouchableOpacity>
+          <Pressable onPress={onLoginRedirect}>
+            <Text style={s.loginLink}>Já tem conta? <Text style={s.loginLinkBold}>Faça login</Text></Text>
+          </Pressable>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -169,61 +162,57 @@ export default function RegisterScreen({ onBack, onLoginRedirect, onRegister }) 
 }
 
 const styles = (theme) => StyleSheet.create({
-  container: { flex: 1, backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' },
-  scroll: { flexGrow: 1, justifyContent: 'center', padding: 20 },
-  backBtn: { position: 'absolute', top: 16, left: 20 },
-  backBtnText: { color: theme.pink, fontSize: 15, fontWeight: '600' },
+  container: { flex: 1, backgroundColor: theme.bg },
+  scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.xl },
+  backBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spacing.xl },
+  backText: { color: colors.primary, fontSize: typography.button, fontWeight: typography.bold },
   card: {
-    backgroundColor: theme.card,
-    borderRadius: 20, padding: 32,
-    maxWidth: 400, width: '100%',
-    alignSelf: 'center', alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08, shadowRadius: 16, elevation: 6,
+    backgroundColor: theme.card, borderRadius: radius.xxl,
+    padding: spacing.xxxl, alignItems: 'center', ...shadows.strong,
   },
   logoCircle: {
-    width: 64, height: 64, borderRadius: 32,
-    borderWidth: 2, borderColor: '#e8a0a8',
-    backgroundColor: 'rgba(232,96,122,0.1)',
-    alignItems: 'center', justifyContent: 'center', marginBottom: 12,
+    width: 72, height: 72, borderRadius: 36,
+    borderWidth: 2, borderColor: colors.primaryMedium,
+    backgroundColor: theme.pinkLight,
+    alignItems: 'center', justifyContent: 'center', marginBottom: spacing.md,
   },
-  logoEmoji: { fontSize: 30 },
-  title: { fontSize: 20, fontWeight: '800', color: theme.pink, marginBottom: 4 },
-  subtitle: { fontSize: 13, color: theme.textMuted, marginBottom: 28 },
-  fields: { width: '100%', gap: 16, marginBottom: 24 },
-  fieldGroup: { gap: 6 },
-  label: { fontSize: 13, fontWeight: '600', color: theme.text },
-  input: {
-    backgroundColor: theme.isDark ? '#1a1a1a' : '#fdf0f2',
-    borderWidth: 1, borderColor: theme.isDark ? '#333' : '#e8d0d4',
-    borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: theme.text,
+  brand: { fontSize: typography.authTitle, fontWeight: typography.extrabold, color: colors.primary, letterSpacing: -0.5, marginBottom: 4 },
+  subtitle: { fontSize: typography.label, color: theme.textMuted, marginBottom: spacing.xxl },
+  fields: { width: '100%', gap: spacing.lg, marginBottom: spacing.xl },
+  fieldGroup: { gap: spacing.xs },
+  label: { fontSize: typography.label, fontWeight: typography.semibold, color: theme.text },
+  inputWrap: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: theme.input, borderWidth: 1.5, borderColor: theme.inputBorder,
+    borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 12,
   },
-  passwordChecks: { marginTop: 8, gap: 4 },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  checkIcon: { fontSize: 13, fontWeight: '700' },
-  checkLabel: { fontSize: 12 },
+  input: { flex: 1, fontSize: typography.body, color: theme.text, paddingVertical: 0 },
+  checksWrap: { marginTop: spacing.sm, gap: 4 },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs },
+  checkLabel: { fontSize: typography.support },
+  errorBox: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: colors.errorBg, borderWidth: 1, borderColor: colors.errorBorder,
+    borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+    width: '100%', marginBottom: spacing.md,
+  },
+  errorText: { color: colors.errorText, fontSize: typography.label, flex: 1 },
   registerBtn: {
-    backgroundColor: theme.pink, width: '100%',
-    paddingVertical: 14, borderRadius: 12, alignItems: 'center',
-    marginBottom: 20,
-    shadowColor: theme.pink,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    backgroundColor: colors.primary, width: '100%', paddingVertical: 15,
+    borderRadius: radius.md, alignItems: 'center', marginBottom: spacing.xl, ...shadows.cta,
   },
-  registerBtnDisabled: { opacity: 0.7 },
-  registerBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
-  loginLink: { fontSize: 13, color: theme.textMuted },
-  loginLinkBold: { color: theme.pink, fontWeight: '700' },
-
-  // Sucesso
+  btnDisabled: { opacity: 0.7 },
+  registerBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: typography.button },
+  loginLink: { fontSize: typography.label, color: theme.textMuted },
+  loginLinkBold: { color: colors.primary, fontWeight: typography.bold },
   successContainer: {
-    flex: 1, backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6',
-    alignItems: 'center', justifyContent: 'center', gap: 12,
+    flex: 1, backgroundColor: theme.bg,
+    alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xxxl,
   },
-  successIcon: { fontSize: 64 },
-  successTitle: { fontSize: 22, fontWeight: '800', color: theme.pink },
-  successSubtitle: { fontSize: 14, color: theme.textMuted },
-  errorText: { color: '#c44150', fontSize: 13, textAlign: 'center', marginBottom: 12 },
+  successIconWrap: {
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: colors.successBg, alignItems: 'center', justifyContent: 'center',
+  },
+  successTitle: { fontSize: typography.successTitle, fontWeight: typography.extrabold, color: colors.primary, letterSpacing: -0.5 },
+  successSubtitle: { fontSize: typography.body, color: theme.textMuted, textAlign: 'center' },
 });
