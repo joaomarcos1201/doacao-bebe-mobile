@@ -20,7 +20,6 @@ const CATEGORIES = [
   { label: 'Brinquedos', icon: 'game-controller-outline' },
   { label: 'Móveis', icon: 'bed-outline' },
   { label: 'Acessórios', icon: 'bag-outline' },
-  { label: 'Alimentação', icon: 'nutrition-outline' },
   { label: 'Outros', icon: 'ellipsis-horizontal-outline' },
 ];
 

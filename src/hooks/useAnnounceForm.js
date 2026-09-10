@@ -9,7 +9,6 @@ const FALLBACK_CATEGORIES = [
   { id: 'Brinquedos', nome: 'Brinquedos', icon: 'game-controller-outline' },
   { id: 'Móveis', nome: 'Móveis', icon: 'bed-outline' },
   { id: 'Acessórios', nome: 'Acessórios', icon: 'bag-outline' },
-  { id: 'Alimentação', nome: 'Alimentação', icon: 'nutrition-outline' },
   { id: 'Outros', nome: 'Outros', icon: 'ellipsis-horizontal-outline' },
 ];
 
