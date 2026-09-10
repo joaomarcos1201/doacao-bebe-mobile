@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, StyleSheet, SafeAreaView, View } from 'react-native';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, StyleSheet, View } from 'react-native';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
-import { FavoritesProvider } from './src/context/FavoritesContext';
+import { FavoritesProvider, useFavorites } from './src/context/FavoritesContext';
+import AuthGateModal from './src/components/AuthGateModal';
 import Navbar from './src/components/Navbar';
 import DrawerMenu from './src/components/DrawerMenu';
 import BottomBar from './src/components/BottomBar';
@@ -22,9 +23,22 @@ import WalletScreen from './src/screens/WalletScreen';
 import OrdersScreen from './src/screens/OrdersScreen';
 import OrderDetailScreen from './src/screens/OrderDetailScreen';
 
+// Screens that require authentication
+const PROTECTED_SCREENS = ['donation', 'profile', 'favorites', 'orders', 'orderDetail', 'sales', 'saleDetail', 'wallet', 'checkout'];
+
+const ACTION_TYPE_MAP = {
+  donation: 'announce',
+  favorites: 'favorite',
+  checkout: 'buy',
+  orders: 'orders',
+  profile: 'profile',
+};
+
 function AppContent() {
   const { theme } = useTheme();
   const { user, loading: authLoading, login, register, logout, hasAnnouncements, sellerLoading, refreshSellerStatus } = useAuth();
+  const { setAuthRequiredHandler, loadFavoriteIds } = useFavorites();
+
   const [screen, setScreen] = useState('home');
   const [activeTab, setActiveTab] = useState('home');
   const [selectedProduct, setSelectedProduct] = useState(null);
@@ -32,23 +46,74 @@ function AppContent() {
   const [selectedSale, setSelectedSale] = useState(null);
   const [exploreSearch, setExploreSearch] = useState('');
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const handleLoginSuccess = async (email, password) => {
+
+  // Auth gate state
+  const [authModalVisible, setAuthModalVisible] = useState(false);
+  const [authActionType, setAuthActionType] = useState('default');
+  const [pendingScreen, setPendingScreen] = useState(null); // screen to navigate after login
+
+  // Register the auth-required handler in FavoritesContext
+  useEffect(() => {
+    setAuthRequiredHandler((actionType) => {
+      setAuthActionType(actionType || 'default');
+      setPendingScreen(null); // favorite: stay on current screen
+      setAuthModalVisible(true);
+    });
+    return () => setAuthRequiredHandler(null);
+  }, [setAuthRequiredHandler]);
+
+  // Navigate to a screen, requiring auth if protected
+  const navigateTo = useCallback((targetScreen, opts = {}) => {
+    if (!user && PROTECTED_SCREENS.includes(targetScreen)) {
+      setAuthActionType(ACTION_TYPE_MAP[targetScreen] || 'default');
+      setPendingScreen({ screen: targetScreen, ...opts });
+      setAuthModalVisible(true);
+      return;
+    }
+    if (opts.product !== undefined) setSelectedProduct(opts.product);
+    if (opts.order !== undefined) setSelectedOrder(opts.order);
+    if (opts.sale !== undefined) setSelectedSale(opts.sale);
+    if (opts.search !== undefined) setExploreSearch(opts.search);
+    setScreen(targetScreen);
+  }, [user]);
+
+  const handleAuthSuccess = useCallback(async () => {
+    setAuthModalVisible(false);
+    await refreshSellerStatus();
+    await loadFavoriteIds();
+    if (pendingScreen) {
+      const { screen: target, product, order, sale, search } = pendingScreen;
+      if (product !== undefined) setSelectedProduct(product);
+      if (order !== undefined) setSelectedOrder(order);
+      if (sale !== undefined) setSelectedSale(sale);
+      if (search !== undefined) setExploreSearch(search);
+      setScreen(target);
+      setPendingScreen(null);
+    }
+  }, [pendingScreen, refreshSellerStatus, loadFavoriteIds]);
+
+  const handleAuthClose = useCallback(() => {
+    setAuthModalVisible(false);
+    setPendingScreen(null);
+  }, []);
+
+  const handleLoginSuccess = useCallback(async (email, password) => {
     await login(email, password);
     setScreen('home');
     setActiveTab('home');
-  };
-  const handleSellerFeature = (feature) => {
-    if (feature === 'Minhas Vendas') setScreen('sales');
-    else if (feature === 'Carteira') setScreen('wallet');
-    else Alert.alert('Em breve', 'Esta área será integrada em uma próxima fase.');
-  };
+  }, [login]);
 
-  const handleTabPress = (tab) => {
+  const handleSellerFeature = useCallback((feature) => {
+    if (feature === 'Minhas Vendas') navigateTo('sales');
+    else if (feature === 'Carteira') navigateTo('wallet');
+  }, [navigateTo]);
+
+  const handleTabPress = useCallback((tab) => {
     setActiveTab(tab);
     if (tab === 'home') setScreen('home');
     if (tab === 'explore') { setExploreSearch(''); setScreen('explore'); }
-    if (tab === 'donate') setScreen('donation');
-  };
+    if (tab === 'donate') navigateTo('donation');
+  }, [navigateTo]);
 
   if (authLoading) {
     return (
@@ -58,19 +123,7 @@ function AppContent() {
     );
   }
 
-  if (!user && screen !== 'register') {
-    return (
-      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
-        <LoginScreen
-          onRegister={() => setScreen('register')}
-          onLoginSuccess={handleLoginSuccess}
-          onForgotPassword={() => {}}
-        />
-      </SafeAreaView>
-    );
-  }
-
-  // Telas sem BottomBar
+  // Full-screen auth flows (when user explicitly navigates to login/register)
   if (screen === 'login') {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
@@ -96,6 +149,7 @@ function AppContent() {
     );
   }
 
+  // Protected full-screen routes
   if (screen === 'profile') {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
@@ -170,7 +224,22 @@ function AppContent() {
   if (screen === 'productDetail') {
     return (
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
-          <ProductDetailScreen onBack={() => setScreen('home')} onBuy={() => setScreen('checkout')} productId={selectedProduct} />
+        <ProductDetailScreen
+          onBack={() => setScreen('home')}
+          onBuy={() => navigateTo('checkout', { product: selectedProduct })}
+          productId={selectedProduct}
+          onAuthRequired={(actionType) => {
+            setAuthActionType(actionType || 'buy');
+            setPendingScreen({ screen: 'checkout', product: selectedProduct });
+            setAuthModalVisible(true);
+          }}
+        />
+        <AuthGateModal
+          visible={authModalVisible}
+          onClose={handleAuthClose}
+          onSuccess={handleAuthSuccess}
+          actionType={authActionType}
+        />
       </SafeAreaView>
     );
   }
@@ -188,17 +257,28 @@ function AppContent() {
       <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
         <AboutScreen
           onBack={() => setScreen('home')}
-          onDonate={() => setScreen('donation')}
+          onDonate={() => navigateTo('donation')}
           onViewProducts={() => setScreen('home')}
         />
       </SafeAreaView>
     );
   }
 
-  // Tela principal com BottomBar
+  if (screen === 'donation') {
+    return (
+      <SafeAreaView style={[styles.safe, { backgroundColor: theme.isDark ? '#0f0f0f' : '#f9f5f6' }]}>
+        <DonationScreen
+          onBack={() => { setScreen('home'); setActiveTab('home'); }}
+          onProductCreated={refreshSellerStatus}
+        />
+      </SafeAreaView>
+    );
+  }
+
+  // Main marketplace layout with BottomBar (public)
   return (
     <SafeAreaView style={[styles.safe, { backgroundColor: theme.bg }]}>
-      {screen !== 'explore' && screen !== 'donation' && (
+      {screen !== 'explore' && (
         <Navbar
           user={user}
           onLogin={() => setScreen('login')}
@@ -208,11 +288,15 @@ function AppContent() {
       )}
       <View style={styles.content}>
         {screen === 'explore' ? (
-          <ExploreScreen initialSearch={exploreSearch} onProductPress={(productId) => { setSelectedProduct(productId); setScreen('productDetail'); }} />
-        ) : screen === 'donation' ? (
-      <DonationScreen onBack={() => { setScreen('home'); setActiveTab('home'); }} onProductCreated={refreshSellerStatus} />
+          <ExploreScreen
+            initialSearch={exploreSearch}
+            onProductPress={(productId) => { setSelectedProduct(productId); setScreen('productDetail'); }}
+          />
         ) : (
-          <HomeScreen onDonate={() => setScreen('donation')} onProductPress={(productId) => { setSelectedProduct(productId); setScreen('productDetail'); }} />
+          <HomeScreen
+            onDonate={() => navigateTo('donation')}
+            onProductPress={(productId) => { setSelectedProduct(productId); setScreen('productDetail'); }}
+          />
         )}
       </View>
       <BottomBar
@@ -226,12 +310,20 @@ function AppContent() {
         isAdmin={user?.isAdmin}
         hasAnnouncements={hasAnnouncements}
         sellerLoading={sellerLoading}
-        onDonate={() => setScreen('donation')}
-        onProfile={() => setScreen('profile')}
-        onOrders={() => setScreen('orders')}
-        onFavorites={() => setScreen('favorites')}
+        onDonate={() => navigateTo('donation')}
+        onProfile={() => navigateTo('profile')}
+        onOrders={() => navigateTo('orders')}
+        onFavorites={() => navigateTo('favorites')}
         onSellerFeature={handleSellerFeature}
         onAbout={() => setScreen('about')}
+      />
+
+      {/* Global auth gate modal — handles favorites and other inline actions */}
+      <AuthGateModal
+        visible={authModalVisible}
+        onClose={handleAuthClose}
+        onSuccess={handleAuthSuccess}
+        actionType={authActionType}
       />
     </SafeAreaView>
   );

@@ -2,9 +2,11 @@ import React, { useRef } from 'react';
 import { Alert, Animated, Pressable, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useFavorites } from '../context/FavoritesContext';
+import { useAuth } from '../context/AuthContext';
 import { colors, shadows } from '../theme/tokens';
 
 export default function FavoriteButton({ productId, style, onChanged }) {
+  const { user } = useAuth();
   const { isFavorite, loadingIds, toggleFavorite } = useFavorites();
   const active = isFavorite(productId);
   const loading = loadingIds.has(productId);
@@ -17,7 +19,8 @@ export default function FavoriteButton({ productId, style, onChanged }) {
     ]).start();
     try {
       const nextValue = await toggleFavorite(productId);
-      onChanged?.(nextValue);
+      // toggleFavorite returns false when not authenticated (modal handled by context)
+      if (nextValue !== false || user) onChanged?.(nextValue);
     } catch {
       Alert.alert('Favoritos', 'Não foi possível atualizar este favorito. Tente novamente.');
     }

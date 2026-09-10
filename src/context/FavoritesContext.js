@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { favoriteApi } from '../services/api';
 import { useAuth } from './AuthContext';
 
@@ -8,6 +8,11 @@ export function FavoritesProvider({ children }) {
   const { user } = useAuth();
   const [favoriteIds, setFavoriteIds] = useState(new Set());
   const [loadingIds, setLoadingIds] = useState(new Set());
+  const authRequiredRef = useRef(null);
+
+  const setAuthRequiredHandler = useCallback((handler) => {
+    authRequiredRef.current = handler;
+  }, []);
 
   const loadFavoriteIds = useCallback(async () => {
     if (!user) { setFavoriteIds(new Set()); return; }
@@ -20,7 +25,11 @@ export function FavoritesProvider({ children }) {
   useEffect(() => { loadFavoriteIds(); }, [loadFavoriteIds]);
 
   const toggleFavorite = useCallback(async (productId) => {
-    if (!user || loadingIds.has(productId)) return false;
+    if (!user) {
+      authRequiredRef.current?.('favorite');
+      return false;
+    }
+    if (loadingIds.has(productId)) return false;
     const isFavorite = favoriteIds.has(productId);
     setLoadingIds((current) => new Set(current).add(productId));
     try {
@@ -32,7 +41,16 @@ export function FavoritesProvider({ children }) {
     }
   }, [favoriteIds, loadingIds, user]);
 
-  return <FavoritesContext.Provider value={{ favoriteIds, loadingIds, isFavorite: (id) => favoriteIds.has(id), toggleFavorite, loadFavoriteIds }}>{children}</FavoritesContext.Provider>;
+  return (
+    <FavoritesContext.Provider value={{
+      favoriteIds, loadingIds,
+      isFavorite: (id) => favoriteIds.has(id),
+      toggleFavorite, loadFavoriteIds,
+      setAuthRequiredHandler,
+    }}>
+      {children}
+    </FavoritesContext.Provider>
+  );
 }
 
 export const useFavorites = () => useContext(FavoritesContext);

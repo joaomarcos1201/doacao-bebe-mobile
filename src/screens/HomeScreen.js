@@ -7,6 +7,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
 import { getApiErrorMessage, productApi } from '../services/api';
 import FavoriteButton from '../components/FavoriteButton';
+import SoldBadge from '../components/SoldBadge';
+import { isProductSold, isProductVisible } from '../utils/productRules';
 import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const { width } = Dimensions.get('window');
@@ -28,7 +30,6 @@ const FEATURES = [
   { icon: 'people-outline', title: 'Comunidade de pais', desc: 'Encontre tudo para o bebê com facilidade' },
 ];
 
-const PUBLIC_STATUSES = ['ATIVO', 'DISPONIVEL', 'APROVADO'];
 const imageUri = (value) => value ? `data:image/jpeg;base64,${value}` : null;
 
 const formatTime = (dateStr) => {
@@ -55,10 +56,7 @@ export default function HomeScreen({ onDonate, onProductPress }) {
     setError('');
     try {
       const response = await productApi.list();
-      setProducts((response.data || []).filter((p) =>
-        PUBLIC_STATUSES.includes(String(p.statusAnuncio || '').toUpperCase())
-        && String(p.statusVisibilidade || '').toUpperCase() !== 'REMOVIDO'
-      ));
+      setProducts((response.data || []).filter(isProductVisible));
     } catch (err) {
       setError(getApiErrorMessage(err, 'Não foi possível carregar os produtos.'));
     } finally {
@@ -144,7 +142,7 @@ export default function HomeScreen({ onDonate, onProductPress }) {
 
       {/* Seção produtos */}
       <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Produtos disponíveis</Text>
+        <Text style={s.sectionTitle}>Anúncios</Text>
         {!loading && <Text style={s.sectionCount}>{countLabel}</Text>}
       </View>
 
@@ -179,42 +177,55 @@ export default function HomeScreen({ onDonate, onProductPress }) {
               ]}
               onPress={() => onProductPress?.(product.id)}
             >
-              <View style={s.cardImageWrap}>
-                {imageUri(product.foto)
-                  ? <Image source={{ uri: imageUri(product.foto) }} style={s.cardImage} />
-                  : (
-                    <View style={[s.cardImage, s.cardImagePlaceholder]}>
-                      <Ionicons name="gift-outline" size={36} color={colors.primaryMedium} />
+              {(() => {
+                const sold = isProductSold(product);
+                const reserved = !sold && String(product.statusAnuncio || '').toUpperCase() === 'RESERVADO';
+                return (
+                  <>
+                    <View style={s.cardImageWrap}>
+                      {imageUri(product.foto)
+                        ? <Image source={{ uri: imageUri(product.foto) }} style={[s.cardImage, sold && s.cardImageSold]} />
+                        : (
+                          <View style={[s.cardImage, s.cardImagePlaceholder]}>
+                            <Ionicons name="gift-outline" size={36} color={colors.primaryMedium} />
+                          </View>
+                        )
+                      }
+                      {sold ? (
+                        <SoldBadge variant="overlay" />
+                      ) : (
+                        <FavoriteButton productId={product.id} style={s.favBtn} />
+                      )}
+                      {reserved && (
+                        <View style={s.reservedBadge}>
+                          <Text style={s.reservedBadgeText}>Reservado</Text>
+                        </View>
+                      )}
                     </View>
-                  )
-                }
-                <FavoriteButton productId={product.id} style={s.favBtn} />
-                {!!product.statusAnuncio && product.statusAnuncio.toUpperCase() === 'RESERVADO' && (
-                  <View style={s.reservedBadge}>
-                    <Text style={s.reservedBadgeText}>Reservado</Text>
-                  </View>
-                )}
-              </View>
-              <View style={s.cardBody}>
-                {!!product.conservacao && (
-                  <View style={s.conditionBadge}>
-                    <Text style={s.conditionBadgeText}>{product.conservacao}</Text>
-                  </View>
-                )}
-                <Text style={s.cardName} numberOfLines={1}>{product.nome}</Text>
-                <Text style={s.cardDesc} numberOfLines={2}>{product.descricao || 'Sem descrição.'}</Text>
-                {!!product.preco && (
-                  <Text style={s.cardPrice}>
-                    R$ {Number(product.preco).toFixed(2).replace('.', ',')}
-                  </Text>
-                )}
-                {!!product.dataAnuncio && (
-                  <Text style={s.cardTime}>{formatTime(product.dataAnuncio)}</Text>
-                )}
-                <View style={s.cardBtn}>
-                  <Text style={s.cardBtnText}>Ver Detalhes</Text>
-                </View>
-              </View>
+                    <View style={[s.cardBody, sold && s.cardBodySold]}>
+                      {!!product.conservacao && !sold && (
+                        <View style={s.conditionBadge}>
+                          <Text style={s.conditionBadgeText}>{product.conservacao}</Text>
+                        </View>
+                      )}
+                      <Text style={[s.cardName, sold && s.cardNameSold]} numberOfLines={1}>{product.nome}</Text>
+                      {!!product.preco && (
+                        <Text style={[s.cardPrice, sold && s.cardPriceSold]}>
+                          R$ {Number(product.preco).toFixed(2).replace('.', ',')}
+                        </Text>
+                      )}
+                      {!sold && !!product.dataAnuncio && (
+                        <Text style={s.cardTime}>{formatTime(product.dataAnuncio)}</Text>
+                      )}
+                      <View style={[s.cardBtn, sold && s.cardBtnSold]}>
+                        <Text style={[s.cardBtnText, sold && s.cardBtnTextSold]}>
+                          {sold ? 'Vendido' : 'Ver Detalhes'}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                );
+              })()}
             </Pressable>
           ))}
         </View>
@@ -363,6 +374,13 @@ const styles = (theme) => StyleSheet.create({
     alignItems: 'center', marginTop: 4,
   },
   cardBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: 12 },
+
+  cardImageSold: { opacity: 0.7 },
+  cardBodySold: { opacity: 0.75 },
+  cardNameSold: { color: theme.textMuted },
+  cardPriceSold: { color: theme.textMuted, textDecorationLine: 'line-through', fontSize: typography.label },
+  cardBtnSold: { backgroundColor: theme.isDark ? '#2a2a2a' : '#e5e7eb' },
+  cardBtnTextSold: { color: theme.textMuted },
 
   // Estados
   stateWrap: { alignItems: 'center', paddingVertical: 48, gap: spacing.sm },

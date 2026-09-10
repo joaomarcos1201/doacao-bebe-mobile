@@ -8,8 +8,10 @@ import { useTheme } from '../context/ThemeContext';
 import { favoriteApi, getApiErrorMessage } from '../services/api';
 import { useFavorites } from '../context/FavoritesContext';
 import FavoriteButton from '../components/FavoriteButton';
+import SoldBadge from '../components/SoldBadge';
 import ScreenHeader from '../components/ScreenHeader';
 import EmptyState from '../components/EmptyState';
+import { isProductSold } from '../utils/productRules';
 import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const imageUri = (value) => value ? `data:image/jpeg;base64,${value}` : null;
@@ -38,7 +40,9 @@ export default function FavoritesScreen({ onBack, onProductPress }) {
   useEffect(() => { load(); }, [load]);
 
   const count = products.length;
+  const soldCount = products.filter(isProductSold).length;
   const countLabel = count === 1 ? `${count} produto salvo` : `${count} produtos salvos`;
+  const soldLabel = soldCount > 0 ? ` · ${soldCount} vendido${soldCount > 1 ? 's' : ''}` : '';
 
   return (
     <View style={s.container}>
@@ -70,32 +74,49 @@ export default function FavoritesScreen({ onBack, onProductPress }) {
           />
         ) : (
           <>
-            <Text style={s.countLabel}>{countLabel}</Text>
-            {products.map((product) => (
+            <Text style={s.countLabel}>{countLabel}{soldLabel}</Text>
+            {products.map((product) => {
+              const sold = isProductSold(product);
+              return (
               <Pressable
                 key={product.id}
-                style={({ pressed }) => [s.card, pressed && { opacity: 0.92 }]}
+                style={({ pressed }) => [s.card, sold && s.cardSold, pressed && { opacity: 0.92 }]}
                 onPress={() => onProductPress?.(product.id)}
               >
-                {imageUri(product.foto)
-                  ? <Image source={{ uri: imageUri(product.foto) }} style={s.image} />
-                  : (
-                    <View style={[s.image, s.imagePlaceholder]}>
-                      <Ionicons name="gift-outline" size={28} color={colors.primaryMedium} />
+                <View style={s.imageWrap}>
+                  {imageUri(product.foto)
+                    ? <Image source={{ uri: imageUri(product.foto) }} style={[s.image, sold && s.imageSold]} />
+                    : (
+                      <View style={[s.image, s.imagePlaceholder]}>
+                        <Ionicons name="gift-outline" size={28} color={colors.primaryMedium} />
+                      </View>
+                    )
+                  }
+                  {sold && (
+                    <View style={s.soldOverlay}>
+                      <Text style={s.soldOverlayText}>VENDIDO</Text>
                     </View>
-                  )
-                }
+                  )}
+                </View>
                 <View style={s.info}>
-                  {!!product.categoria && (
+                  {sold ? (
+                    <View style={s.soldInlineBadge}>
+                      <Text style={s.soldInlineBadgeText}>Vendido</Text>
+                    </View>
+                  ) : !!product.categoria && (
                     <View style={s.catBadge}>
                       <Text style={s.catBadgeText}>{product.categoria}</Text>
                     </View>
                   )}
-                  <Text style={s.name} numberOfLines={1}>{product.nome}</Text>
+                  <Text style={[s.name, sold && s.nameSold]} numberOfLines={1}>{product.nome}</Text>
                   {!!product.preco && (
-                    <Text style={s.price}>R$ {Number(product.preco).toFixed(2).replace('.', ',')}</Text>
+                    <Text style={[s.price, sold && s.priceSold]}>
+                      R$ {Number(product.preco).toFixed(2).replace('.', ',')}
+                    </Text>
                   )}
-                  <Text style={s.muted} numberOfLines={1}>{product.descricao || 'Sem descrição.'}</Text>
+                  {!sold && (
+                    <Text style={s.muted} numberOfLines={1}>{product.descricao || 'Sem descrição.'}</Text>
+                  )}
                 </View>
                 <FavoriteButton
                   productId={product.id}
@@ -104,7 +125,8 @@ export default function FavoritesScreen({ onBack, onProductPress }) {
                   }}
                 />
               </Pressable>
-            ))}
+              );
+            })}
           </>
         )}
       </ScrollView>
@@ -121,8 +143,28 @@ const styles = (theme) => StyleSheet.create({
     padding: spacing.sm, flexDirection: 'row', alignItems: 'center', gap: spacing.md,
     borderWidth: 1, borderColor: theme.cardBorder, ...shadows.light,
   },
+  cardSold: { borderColor: theme.isDark ? '#2a2a2a' : '#e5e7eb', opacity: 0.85 },
+  imageWrap: { position: 'relative' },
   image: { width: 80, height: 80, borderRadius: radius.md },
+  imageSold: { opacity: 0.6 },
   imagePlaceholder: { backgroundColor: theme.pinkLight, alignItems: 'center', justifyContent: 'center' },
+  soldOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: radius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  soldOverlayText: {
+    color: '#fff', fontSize: 9, fontWeight: typography.extrabold, letterSpacing: 1.2,
+  },
+  soldInlineBadge: {
+    backgroundColor: theme.isDark ? '#2a2a2a' : '#f3f4f6',
+    paddingHorizontal: 7, paddingVertical: 2,
+    borderRadius: radius.pill, alignSelf: 'flex-start',
+    borderWidth: 1, borderColor: theme.isDark ? '#3a3a3a' : '#d1d5db',
+  },
+  soldInlineBadgeText: { color: theme.textMuted, fontSize: 10, fontWeight: typography.bold, letterSpacing: 0.5 },
   info: { flex: 1, gap: 4 },
   catBadge: {
     backgroundColor: theme.pinkLight, paddingHorizontal: 8,
@@ -130,7 +172,9 @@ const styles = (theme) => StyleSheet.create({
   },
   catBadgeText: { color: colors.primary, fontSize: 10, fontWeight: typography.bold },
   name: { color: theme.text, fontSize: typography.button, fontWeight: typography.bold, letterSpacing: -0.2 },
+  nameSold: { color: theme.textMuted },
   price: { color: colors.primary, fontSize: typography.body, fontWeight: typography.extrabold },
+  priceSold: { color: theme.textMuted, textDecorationLine: 'line-through', fontSize: typography.label },
   muted: { color: theme.textMuted, fontSize: typography.support },
   stateWrap: { alignItems: 'center', paddingVertical: 48, gap: spacing.sm },
   stateText: { color: theme.textMuted, fontSize: typography.body, textAlign: 'center' },

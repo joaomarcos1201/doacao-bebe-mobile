@@ -9,7 +9,8 @@ import { useAuth } from '../context/AuthContext';
 import { getApiErrorMessage, productApi } from '../services/api';
 import FavoriteButton from '../components/FavoriteButton';
 import ScreenHeader from '../components/ScreenHeader';
-import { isProductAvailable, isProductOwner } from '../utils/productRules';
+import { isProductAvailable, isProductOwner, isProductSold } from '../utils/productRules';
+import SoldBadge from '../components/SoldBadge';
 import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
 const imageUri = (value) => value ? `data:image/jpeg;base64,${value}` : null;
@@ -24,7 +25,7 @@ const formatTime = (dateStr) => {
   return `há ${Math.floor(diff / 86400)} dias`;
 };
 
-export default function ProductDetailScreen({ onBack, onBuy, productId }) {
+export default function ProductDetailScreen({ onBack, onBuy, productId, onAuthRequired }) {
   const { theme } = useTheme();
   const { user } = useAuth();
   const [product, setProduct] = useState(null);
@@ -53,6 +54,7 @@ export default function ProductDetailScreen({ onBack, onBuy, productId }) {
   const sellerName = product?.vendedor?.nome || product?.doador;
   const isOwnProduct = product && isProductOwner(product, user);
   const isAvailable = isProductAvailable(product);
+  const isSold = isProductSold(product);
 
   return (
     <View style={s.container}>
@@ -76,14 +78,15 @@ export default function ProductDetailScreen({ onBack, onBuy, productId }) {
           {/* Galeria */}
           <View style={s.gallery}>
             {photos.length
-              ? <Image source={{ uri: photos[activeImage] }} style={s.mainImage} resizeMode="cover" />
+              ? <Image source={{ uri: photos[activeImage] }} style={[s.mainImage, isSold && s.mainImageSold]} resizeMode="cover" />
               : (
                 <View style={s.imagePlaceholder}>
                   <Ionicons name="gift-outline" size={72} color={colors.primaryMedium} />
                 </View>
               )
             }
-            <FavoriteButton productId={product.id} style={s.favBtn} />
+            {isSold && <SoldBadge variant="overlay" />}
+            {!isSold && <FavoriteButton productId={product.id} style={s.favBtn} />}
           </View>
 
           {/* Thumbnails */}
@@ -115,8 +118,11 @@ export default function ProductDetailScreen({ onBack, onBuy, productId }) {
           <View style={s.card}>
             <Text style={s.productName}>{product.nome}</Text>
             {!!product.preco && (
-              <Text style={s.price}>R$ {Number(product.preco).toFixed(2).replace('.', ',')}</Text>
+              <Text style={[s.price, isSold && s.priceSold]}>
+                R$ {Number(product.preco).toFixed(2).replace('.', ',')}
+              </Text>
             )}
+            {isSold && <SoldBadge variant="banner" />}
             {!!product.descricao && (
               <Text style={s.productDesc}>{product.descricao}</Text>
             )}
@@ -162,7 +168,15 @@ export default function ProductDetailScreen({ onBack, onBuy, productId }) {
           )}
 
           {/* Ação de compra */}
-          {isOwnProduct ? (
+          {isSold ? (
+            <View style={s.soldNotice}>
+              <Ionicons name="checkmark-circle-outline" size={20} color={theme.textMuted} />
+              <View style={s.soldNoticeText}>
+                <Text style={s.soldNoticeTitle}>Produto vendido</Text>
+                <Text style={s.soldNoticeDesc}>Este anúncio não está mais disponível para compra.</Text>
+              </View>
+            </View>
+          ) : isOwnProduct ? (
             <View style={s.noticeCard}>
               <Ionicons name="information-circle-outline" size={18} color={theme.textMuted} />
               <Text style={s.noticeText}>Você não pode comprar seu próprio produto.</Text>
@@ -170,7 +184,10 @@ export default function ProductDetailScreen({ onBack, onBuy, productId }) {
           ) : isAvailable ? (
             <Pressable
               style={({ pressed }) => [s.buyBtn, pressed && { opacity: 0.85 }]}
-              onPress={onBuy}
+              onPress={() => {
+                if (!user) { onAuthRequired?.('buy'); return; }
+                onBuy?.();
+              }}
             >
               <Ionicons name="bag-outline" size={20} color="#fff" />
               <Text style={s.buyBtnText}>Comprar · R$ {Number(product.preco || 0).toFixed(2).replace('.', ',')}</Text>
@@ -234,7 +251,10 @@ const styles = (theme) => StyleSheet.create({
     fontSize: typography.pageTitle, fontWeight: typography.extrabold,
     color: theme.textTitle, letterSpacing: -0.5,
   },
+  mainImageSold: { opacity: 0.75 },
+
   price: { color: colors.primary, fontSize: typography.priceMain, fontWeight: typography.black },
+  priceSold: { color: theme.textMuted, textDecorationLine: 'line-through', fontSize: typography.cardTitle },
   productDesc: { fontSize: typography.body, color: theme.text, lineHeight: 22 },
   detailsGrid: { gap: spacing.sm, marginTop: spacing.xs },
   detailRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
@@ -258,6 +278,19 @@ const styles = (theme) => StyleSheet.create({
     ...shadows.cta,
   },
   buyBtnText: { color: '#fff', fontSize: typography.button, fontWeight: typography.extrabold },
+
+  soldNotice: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md,
+    backgroundColor: theme.isDark ? '#1a1a1a' : '#f3f4f6',
+    borderRadius: radius.lg, padding: spacing.lg,
+    borderWidth: 1, borderColor: theme.isDark ? '#2a2a2a' : '#d1d5db',
+  },
+  soldNoticeText: { flex: 1, gap: 3 },
+  soldNoticeTitle: {
+    fontSize: typography.button, fontWeight: typography.bold,
+    color: theme.isDark ? '#9CA3AF' : '#374151',
+  },
+  soldNoticeDesc: { fontSize: typography.label, color: theme.textMuted, lineHeight: 20 },
 
   noticeCard: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.sm,

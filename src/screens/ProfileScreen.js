@@ -1,7 +1,7 @@
 import React from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView,
+  KeyboardAvoidingView, Platform, ScrollView, ActivityIndicator,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
@@ -20,6 +20,16 @@ export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLo
   const email = user?.email || '';
   const initial = name.trim().charAt(0).toUpperCase() || '?';
   const s = styles(theme);
+
+  // Seller area items — Minhas Vendas always visible for authenticated users
+  const sellerItems = [
+    { label: 'Minhas Vendas', icon: 'storefront-outline', alwaysShow: true },
+    { label: 'Carteira', icon: 'wallet-outline', alwaysShow: false },
+  ];
+
+  const visibleSellerItems = sellerItems.filter(
+    (item) => item.alwaysShow || (!sellerLoading && hasAnnouncements === true)
+  );
 
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
@@ -60,17 +70,15 @@ export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLo
         </View>
 
         {/* Área do vendedor */}
-        {sellerLoading ? (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Verificando seus anúncios...</Text>
-          </View>
-        ) : hasAnnouncements === true && (
-          <View style={s.card}>
-            <Text style={s.cardTitle}>Área do Vendedor</Text>
-            {[
-              { label: 'Minhas Vendas', icon: 'storefront-outline' },
-              { label: 'Carteira', icon: 'wallet-outline' },
-            ].map((item) => (
+        <View style={s.card}>
+          <Text style={s.cardTitle}>Área do Vendedor</Text>
+          {sellerLoading ? (
+            <View style={s.loadingRow}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={s.loadingText}>Verificando seus anúncios...</Text>
+            </View>
+          ) : (
+            visibleSellerItems.map((item) => (
               <Pressable
                 key={item.label}
                 style={({ pressed }) => [s.sellerLink, pressed && s.sellerLinkPressed]}
@@ -82,9 +90,9 @@ export default function ProfileScreen({ onBack, user, hasAnnouncements, sellerLo
                 <Text style={s.sellerLinkText}>{item.label}</Text>
                 <Ionicons name="chevron-forward" size={16} color={theme.textMuted} />
               </Pressable>
-            ))}
-          </View>
-        )}
+            ))
+          )}
+        </View>
 
         {/* Dicas de segurança */}
         <View style={s.card}>
@@ -155,6 +163,9 @@ const styles = (theme) => StyleSheet.create({
     backgroundColor: theme.pinkLight, alignItems: 'center', justifyContent: 'center',
   },
   sellerLinkText: { flex: 1, fontSize: typography.button, fontWeight: typography.semibold, color: theme.text },
+
+  loadingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xs },
+  loadingText: { color: theme.textMuted, fontSize: typography.label },
 
   tipRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
   tipNum: {

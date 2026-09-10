@@ -1,90 +1,67 @@
-import React, { useState } from 'react';
+import React, { useCallback } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet,
-  KeyboardAvoidingView, Platform, ScrollView, Image,
+  ActivityIndicator, Image, KeyboardAvoidingView, Platform,
+  Pressable, ScrollView, StyleSheet, Text, TextInput, View,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../context/ThemeContext';
-import { getApiErrorMessage, productApi } from '../services/api';
 import ScreenHeader from '../components/ScreenHeader';
+import { useAnnounceForm } from '../hooks/useAnnounceForm';
 import { colors, radius, shadows, spacing, typography } from '../theme/tokens';
 
-const CATEGORIES = [
-  { label: 'Roupas', icon: 'shirt-outline' },
-  { label: 'Brinquedos', icon: 'game-controller-outline' },
-  { label: 'Móveis', icon: 'bed-outline' },
-  { label: 'Acessórios', icon: 'bag-outline' },
-  { label: 'Alimentação', icon: 'nutrition-outline' },
-  { label: 'Outros', icon: 'ellipsis-horizontal-outline' },
-];
-
-const CONDITIONS = [
-  { label: 'Novo', icon: 'sparkles-outline' },
-  { label: 'Semi-novo', icon: 'thumbs-up-outline' },
-  { label: 'Usado', icon: 'cube-outline' },
-];
-
-const HOW_STEPS = [
-  { num: '1', text: 'Preencha o formulário com os dados do produto' },
-  { num: '2', text: 'Aguarde a aprovação da nossa equipe' },
-  { num: '3', text: 'Interessados entrarão em contato via WhatsApp' },
-];
+const CONDITION_ICONS = { Novo: 'sparkles-outline', 'Semi-novo': 'thumbs-up-outline', Usado: 'cube-outline' };
 
 export default function DonationScreen({ onBack, onProductCreated }) {
   const { theme } = useTheme();
-  const [productName, setProductName] = useState('');
-  const [category, setCategory] = useState('');
-  const [description, setDescription] = useState('');
-  const [condition, setCondition] = useState('');
-  const [brand, setBrand] = useState('');
-  const [price, setPrice] = useState('');
-  const [originZip, setOriginZip] = useState('');
-  const [photos, setPhotos] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [success, setSuccess] = useState(false);
-  const [error, setError] = useState('');
   const s = styles(theme);
 
-  const pickImage = async () => {
+  const {
+    nome, setNome,
+    categoria, setCategoria,
+    descricao, setDescricao,
+    conservacao, setConservacao,
+    marca, setMarca,
+    preco, setPreco,
+    cep, handleCepChange,
+    photos, addPhotos, removePhoto,
+    cepLoading, cepError, cepData,
+    categories, categoriesLoading,
+    CONDITIONS, MAX_PHOTOS,
+    analyzing, analysisResults, analysisError, analyzePhotos,
+    submitting, submitError, setSubmitError, success,
+    submit, reset,
+  } = useAnnounceForm({ onSuccess: onProductCreated });
+
+  const pickImages = useCallback(async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
+    if (status !== 'granted') {
+      setSubmitError('Permissão para acessar a galeria é necessária.');
+      return;
+    }
+    const remaining = MAX_PHOTOS - photos.length;
+    if (remaining <= 0) return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsMultipleSelection: true,
-      selectionLimit: 4,
+      selectionLimit: remaining,
       allowsEditing: false,
-      quality: 0.7,
+      quality: 0.8,
     });
-    if (!result.canceled) setPhotos(result.assets.slice(0, 4));
-  };
-
-  const removePhoto = (index) => setPhotos((curr) => curr.filter((_, i) => i !== index));
-
-  const handleSubmit = async () => {
-    const numericPrice = Number(price.replace(',', '.'));
-    if (!productName.trim() || !description.trim() || !category || !brand.trim() || !condition || !originZip.trim()) {
-      setError('Preencha todos os campos obrigatórios.');
-      return;
+    if (!result.canceled && result.assets?.length > 0) {
+      addPhotos(result.assets);
     }
-    if (!Number.isFinite(numericPrice) || numericPrice < 0) {
-      setError('Informe um preço válido.');
-      return;
-    }
-    setLoading(true); setError('');
-    try {
-      const formData = new FormData();
-      [['nome', productName], ['descricao', description], ['categoria', category], ['marca', brand], ['conservacao', condition], ['preco', numericPrice.toFixed(2)], ['cepOrigem', originZip.replace(/\D/g, '')]].forEach(([k, v]) => formData.append(k, v));
-      photos.forEach((photo, i) => formData.append(i === 0 ? 'imagem' : `imagem_${i}`, { uri: photo.uri, name: photo.fileName || `produto-${i + 1}.jpg`, type: photo.mimeType || 'image/jpeg' }));
-      await productApi.create(formData);
-      try { await onProductCreated?.(); } catch { /* ok */ }
-      setProductName(''); setCategory(''); setDescription(''); setCondition('');
-      setBrand(''); setPrice(''); setOriginZip(''); setPhotos([]);
-      setSuccess(true);
-    } catch (err) {
-      setError(getApiErrorMessage(err, 'Não foi possível enviar o anúncio.'));
-    } finally { setLoading(false); }
-  };
+  }, [photos.length, MAX_PHOTOS, addPhotos, setSubmitError]);
+
+  const handleAnalyze = useCallback(async () => {
+    setSubmitError('');
+    await analyzePhotos(photos);
+  }, [analyzePhotos, photos, setSubmitError]);
+
+  const handleSubmit = useCallback(async () => {
+    setSubmitError('');
+    await submit();
+  }, [submit, setSubmitError]);
 
   if (success) {
     return (
@@ -93,26 +70,38 @@ export default function DonationScreen({ onBack, onProductCreated }) {
           <Ionicons name="checkmark-circle" size={64} color={colors.success} />
         </View>
         <Text style={s.successTitle}>Anúncio enviado!</Text>
-        <Text style={s.successSubtitle}>Seu produto foi enviado para análise. O administrador irá revisar e aprovar em breve.</Text>
-        <Pressable style={({ pressed }) => [s.successBtn, pressed && { opacity: 0.85 }]} onPress={onBack}>
+        <Text style={s.successSubtitle}>
+          Seu produto foi enviado para análise. O administrador irá revisar e aprovar em breve.
+        </Text>
+        <Pressable style={({ pressed }) => [s.successBtn, pressed && { opacity: 0.85 }]} onPress={() => { reset(); onBack?.(); }}>
           <Text style={s.successBtnText}>Voltar para o início</Text>
+        </Pressable>
+        <Pressable style={({ pressed }) => [s.successBtnOutline, pressed && { opacity: 0.7 }]} onPress={reset}>
+          <Text style={s.successBtnOutlineText}>Criar outro anúncio</Text>
         </Pressable>
       </View>
     );
   }
 
+  const hasRejected = analysisResults.some((r) => !r.approved);
+  const allAnalyzed = analysisResults.length === photos.length && photos.length > 0;
+  const allApproved = allAnalyzed && !hasRejected;
+
   return (
     <KeyboardAvoidingView style={s.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScreenHeader title="Anunciar Produto" onBack={onBack} backLabel="Voltar" />
-      <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-
-        {/* Card formulário */}
+      <ScrollView
+        contentContainerStyle={s.scroll}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        {/* ── DADOS DO PRODUTO ── */}
         <View style={s.card}>
           <View style={s.cardHeader}>
             <Ionicons name="megaphone-outline" size={22} color={colors.primary} />
-            <View>
-              <Text style={s.cardTitle}>🎁 Fazer uma doação</Text>
-              <Text style={s.cardSubtitle}>Ajude outras famílias compartilhando o que você não usa mais</Text>
+            <View style={s.flex1}>
+              <Text style={s.cardTitle}>Dados do produto</Text>
+              <Text style={s.cardSubtitle}>Preencha as informações do item que deseja anunciar</Text>
             </View>
           </View>
 
@@ -121,25 +110,36 @@ export default function DonationScreen({ onBack, onProductCreated }) {
             <Text style={s.label}>Nome do produto *</Text>
             <View style={s.inputWrap}>
               <Ionicons name="cube-outline" size={15} color={theme.textMuted} />
-              <TextInput style={s.input} value={productName} onChangeText={setProductName} placeholder="Ex: Macacão azul" placeholderTextColor={colors.textPlaceholder} />
+              <TextInput
+                style={s.input}
+                value={nome}
+                onChangeText={setNome}
+                placeholder="Ex: Macacão azul 6 meses"
+                placeholderTextColor={colors.textPlaceholder}
+                maxLength={100}
+              />
             </View>
           </View>
 
           {/* Categoria */}
           <View style={s.fieldGroup}>
             <Text style={s.label}>Categoria *</Text>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
-              {CATEGORIES.map((c) => (
-                <Pressable
-                  key={c.label}
-                  style={({ pressed }) => [s.chip, category === c.label && s.chipActive, pressed && { opacity: 0.8 }]}
-                  onPress={() => setCategory(c.label)}
-                >
-                  <Ionicons name={c.icon} size={13} color={category === c.label ? '#fff' : theme.textMuted} />
-                  <Text style={[s.chipText, category === c.label && s.chipTextActive]}>{c.label}</Text>
-                </Pressable>
-              ))}
-            </ScrollView>
+            {categoriesLoading ? (
+              <ActivityIndicator size="small" color={colors.primary} style={{ alignSelf: 'flex-start' }} />
+            ) : (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chipsRow}>
+                {categories.map((c) => (
+                  <Pressable
+                    key={c.id}
+                    style={({ pressed }) => [s.chip, categoria === c.id && s.chipActive, pressed && { opacity: 0.8 }]}
+                    onPress={() => setCategoria(c.id)}
+                  >
+                    <Ionicons name={c.icon} size={13} color={categoria === c.id ? '#fff' : theme.textMuted} />
+                    <Text style={[s.chipText, categoria === c.id && s.chipTextActive]}>{c.nome}</Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+            )}
           </View>
 
           {/* Descrição */}
@@ -147,26 +147,29 @@ export default function DonationScreen({ onBack, onProductCreated }) {
             <Text style={s.label}>Descrição *</Text>
             <TextInput
               style={[s.inputWrap, s.textarea]}
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Descreva o produto, tamanho, cor, estado..."
+              value={descricao}
+              onChangeText={setDescricao}
+              placeholder="Descreva o produto: tamanho, cor, estado, motivo da venda..."
               placeholderTextColor={colors.textPlaceholder}
-              multiline numberOfLines={3} textAlignVertical="top"
+              multiline
+              numberOfLines={4}
+              textAlignVertical="top"
+              maxLength={1000}
             />
           </View>
 
-          {/* Estado */}
+          {/* Estado de conservação */}
           <View style={s.fieldGroup}>
             <Text style={s.label}>Estado do produto *</Text>
             <View style={s.conditionsRow}>
               {CONDITIONS.map((c) => (
                 <Pressable
-                  key={c.label}
-                  style={({ pressed }) => [s.conditionBtn, condition === c.label && s.conditionBtnActive, pressed && { opacity: 0.8 }]}
-                  onPress={() => setCondition(c.label)}
+                  key={c}
+                  style={({ pressed }) => [s.conditionBtn, conservacao === c && s.conditionBtnActive, pressed && { opacity: 0.8 }]}
+                  onPress={() => setConservacao(c)}
                 >
-                  <Ionicons name={c.icon} size={16} color={condition === c.label ? colors.primary : theme.textMuted} />
-                  <Text style={[s.conditionText, condition === c.label && s.conditionTextActive]}>{c.label}</Text>
+                  <Ionicons name={CONDITION_ICONS[c]} size={16} color={conservacao === c ? colors.primary : theme.textMuted} />
+                  <Text style={[s.conditionText, conservacao === c && s.conditionTextActive]}>{c}</Text>
                 </Pressable>
               ))}
             </View>
@@ -178,82 +181,211 @@ export default function DonationScreen({ onBack, onProductCreated }) {
               <Text style={s.label}>Marca *</Text>
               <View style={s.inputWrap}>
                 <Ionicons name="pricetag-outline" size={15} color={theme.textMuted} />
-                <TextInput style={s.input} value={brand} onChangeText={setBrand} placeholder="Ex: Hering" placeholderTextColor={colors.textPlaceholder} />
+                <TextInput
+                  style={s.input}
+                  value={marca}
+                  onChangeText={setMarca}
+                  placeholder="Ex: Hering"
+                  placeholderTextColor={colors.textPlaceholder}
+                  maxLength={60}
+                />
               </View>
             </View>
             <View style={[s.fieldGroup, s.flex1]}>
               <Text style={s.label}>Preço (R$) *</Text>
               <View style={s.inputWrap}>
                 <Text style={[s.inputPrefix, { color: theme.textMuted }]}>R$</Text>
-                <TextInput style={s.input} value={price} onChangeText={setPrice} placeholder="0,00" placeholderTextColor={colors.textPlaceholder} keyboardType="decimal-pad" />
+                <TextInput
+                  style={s.input}
+                  value={preco}
+                  onChangeText={setPreco}
+                  placeholder="0,00"
+                  placeholderTextColor={colors.textPlaceholder}
+                  keyboardType="decimal-pad"
+                  maxLength={10}
+                />
               </View>
             </View>
           </View>
+        </View>
 
-          {/* CEP */}
-          <View style={s.fieldGroup}>
-            <Text style={s.label}>CEP de origem *</Text>
-            <View style={s.inputWrap}>
-              <Ionicons name="location-outline" size={15} color={theme.textMuted} />
-              <TextInput style={s.input} value={originZip} onChangeText={setOriginZip} placeholder="00000-000" placeholderTextColor={colors.textPlaceholder} keyboardType="numeric" />
+        {/* ── LOCALIZAÇÃO ── */}
+        <View style={s.card}>
+          <View style={s.cardHeader}>
+            <Ionicons name="location-outline" size={22} color={colors.primary} />
+            <View style={s.flex1}>
+              <Text style={s.cardTitle}>Localização</Text>
+              <Text style={s.cardSubtitle}>Informe o CEP de origem do produto</Text>
             </View>
           </View>
 
-          {/* Fotos */}
           <View style={s.fieldGroup}>
-            <Text style={s.label}>Fotos do produto (até 4)</Text>
-            <Pressable style={({ pressed }) => [s.photoArea, pressed && { opacity: 0.8 }]} onPress={pickImage}>
-              {photos.length === 0 ? (
-                <View style={s.photoPlaceholder}>
-                  <Ionicons name="camera-outline" size={28} color={colors.primaryMedium} />
-                  <Text style={s.photoPlaceholderText}>Toque para adicionar foto</Text>
-                </View>
-              ) : (
-                <View style={s.photosRow}>
-                  {photos.map((item, i) => (
-                    <View key={item.uri} style={s.photoItem}>
-                      <Image source={{ uri: item.uri }} style={s.photoPreview} />
-                      <Pressable onPress={() => removePhoto(i)} style={s.removePhoto}>
-                        <Ionicons name="close" size={14} color="#fff" />
-                      </Pressable>
-                    </View>
-                  ))}
-                  {photos.length < 4 && (
-                    <View style={s.addPhotoBtn}>
-                      <Ionicons name="add" size={24} color={theme.textMuted} />
-                    </View>
-                  )}
-                </View>
+            <Text style={s.label}>CEP de origem *</Text>
+            <View style={[s.inputWrap, cepError ? s.inputError : null]}>
+              <Ionicons name="location-outline" size={15} color={cepError ? colors.error : theme.textMuted} />
+              <TextInput
+                style={s.input}
+                value={cep}
+                onChangeText={handleCepChange}
+                placeholder="00000-000"
+                placeholderTextColor={colors.textPlaceholder}
+                keyboardType="numeric"
+                maxLength={9}
+              />
+              {cepLoading && <ActivityIndicator size="small" color={colors.primary} />}
+              {!cepLoading && cepData && (
+                <Ionicons name="checkmark-circle" size={18} color={colors.success} />
               )}
-            </Pressable>
+            </View>
+            {!!cepError && (
+              <Text style={s.fieldError}>{cepError}</Text>
+            )}
+            {!!cepData && (
+              <View style={s.cepResult}>
+                <Ionicons name="map-outline" size={14} color={colors.primary} />
+                <Text style={s.cepResultText}>
+                  {[cepData.logradouro, cepData.bairro, cepData.localidade, cepData.uf]
+                    .filter(Boolean).join(', ')}
+                </Text>
+              </View>
+            )}
+          </View>
+        </View>
+
+        {/* ── FOTOS ── */}
+        <View style={s.card}>
+          <View style={s.cardHeader}>
+            <Ionicons name="camera-outline" size={22} color={colors.primary} />
+            <View style={s.flex1}>
+              <Text style={s.cardTitle}>Fotos do produto</Text>
+              <Text style={s.cardSubtitle}>
+                Adicione até {MAX_PHOTOS} fotos. A primeira será a imagem principal.
+              </Text>
+            </View>
           </View>
 
-          {!!error && (
-            <View style={s.errorBox}>
-              <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
-              <Text style={s.errorText}>{error}</Text>
+          {/* Grid de fotos */}
+          <View style={s.photosGrid}>
+            {photos.map((photo, i) => {
+              const result = analysisResults[i];
+              const isRejected = result && !result.approved;
+              const isApproved = result && result.approved;
+              return (
+                <View key={photo.uri} style={s.photoItem}>
+                  <Image source={{ uri: photo.uri }} style={[s.photoPreview, isRejected && s.photoRejected]} />
+                  {i === 0 && (
+                    <View style={s.photoPrimaryBadge}>
+                      <Text style={s.photoPrimaryText}>Principal</Text>
+                    </View>
+                  )}
+                  {isRejected && (
+                    <View style={s.photoStatusBadge}>
+                      <Ionicons name="close-circle" size={14} color="#fff" />
+                      <Text style={s.photoStatusText}>Rejeitada</Text>
+                    </View>
+                  )}
+                  {isApproved && (
+                    <View style={[s.photoStatusBadge, s.photoApprovedBadge]}>
+                      <Ionicons name="checkmark-circle" size={14} color="#fff" />
+                    </View>
+                  )}
+                  <Pressable onPress={() => removePhoto(i)} style={s.removePhoto}>
+                    <Ionicons name="close" size={14} color="#fff" />
+                  </Pressable>
+                  {isRejected && !!result.reason && (
+                    <Text style={s.rejectedReason} numberOfLines={2}>{result.reason}</Text>
+                  )}
+                </View>
+              );
+            })}
+            {photos.length < MAX_PHOTOS && (
+              <Pressable
+                style={({ pressed }) => [s.addPhotoBtn, pressed && { opacity: 0.7 }]}
+                onPress={pickImages}
+              >
+                <Ionicons name="add" size={28} color={theme.textMuted} />
+                <Text style={s.addPhotoText}>Adicionar</Text>
+              </Pressable>
+            )}
+          </View>
+
+          {/* Botão de análise de IA */}
+          {photos.length > 0 && !allApproved && (
+            <Pressable
+              style={({ pressed }) => [s.analyzeBtn, (analyzing || submitting) && s.btnDisabled, pressed && { opacity: 0.85 }]}
+              onPress={handleAnalyze}
+              disabled={analyzing || submitting}
+            >
+              {analyzing ? (
+                <>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={s.analyzeBtnText}>Analisando fotos...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="scan-outline" size={18} color={colors.primary} />
+                  <Text style={s.analyzeBtnText}>Analisar fotos com IA</Text>
+                </>
+              )}
+            </Pressable>
+          )}
+
+          {allApproved && (
+            <View style={s.approvedBanner}>
+              <Ionicons name="checkmark-circle" size={18} color={colors.success} />
+              <Text style={s.approvedBannerText}>Todas as fotos foram aprovadas!</Text>
             </View>
           )}
 
-          <Pressable
-            style={({ pressed }) => [s.submitBtn, loading && s.btnDisabled, pressed && { opacity: 0.85 }]}
-            onPress={handleSubmit}
-            disabled={loading}
-          >
-            <Ionicons name={loading ? 'reload-outline' : 'send-outline'} size={18} color="#fff" />
-            <Text style={s.submitBtnText}>{loading ? 'Enviando...' : 'Enviar Doação'}</Text>
-          </Pressable>
+          {!!analysisError && (
+            <View style={s.errorBox}>
+              <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+              <Text style={s.errorText}>{analysisError}</Text>
+            </View>
+          )}
         </View>
 
-        {/* Como funciona */}
+        {/* ── ERRO GERAL ── */}
+        {!!submitError && (
+          <View style={s.errorBox}>
+            <Ionicons name="alert-circle-outline" size={14} color={colors.error} />
+            <Text style={s.errorText}>{submitError}</Text>
+          </View>
+        )}
+
+        {/* ── BOTÃO ENVIAR ── */}
+        <Pressable
+          style={({ pressed }) => [s.submitBtn, (submitting || analyzing) && s.btnDisabled, pressed && { opacity: 0.85 }]}
+          onPress={handleSubmit}
+          disabled={submitting || analyzing}
+        >
+          {submitting ? (
+            <>
+              <ActivityIndicator size="small" color="#fff" />
+              <Text style={s.submitBtnText}>Enviando anúncio...</Text>
+            </>
+          ) : (
+            <>
+              <Ionicons name="send-outline" size={18} color="#fff" />
+              <Text style={s.submitBtnText}>Publicar Anúncio</Text>
+            </>
+          )}
+        </Pressable>
+
+        {/* ── COMO FUNCIONA ── */}
         <View style={s.howCard}>
           <Text style={s.howTitle}>Como funciona?</Text>
-          {HOW_STEPS.map((step) => (
-            <View key={step.num} style={s.howStep}>
+          {[
+            'Preencha os dados e adicione fotos do produto',
+            'As fotos são analisadas automaticamente pela IA',
+            'Aguarde a aprovação do administrador',
+            'Compradores poderão encontrar e adquirir seu produto',
+          ].map((text, i) => (
+            <View key={i} style={s.howStep}>
               <View style={s.howNum}>
-                <Text style={s.howNumText}>{step.num}</Text>
+                <Text style={s.howNumText}>{i + 1}</Text>
               </View>
-              <Text style={s.howStepText}>{step.text}</Text>
+              <Text style={s.howStepText}>{text}</Text>
             </View>
           ))}
         </View>
@@ -274,7 +406,7 @@ const styles = (theme) => StyleSheet.create({
     borderWidth: 1, borderColor: theme.cardBorder, ...shadows.light,
   },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.md },
-  cardTitle: { fontSize: typography.cardTitle, fontWeight: typography.extrabold, color: theme.textTitle, letterSpacing: -0.3 },
+  cardTitle: { fontSize: typography.button, fontWeight: typography.extrabold, color: theme.textTitle, letterSpacing: -0.3 },
   cardSubtitle: { fontSize: typography.label, color: theme.textMuted, marginTop: 2 },
 
   fieldGroup: { gap: spacing.xs },
@@ -284,9 +416,11 @@ const styles = (theme) => StyleSheet.create({
     backgroundColor: theme.input, borderWidth: 1.5, borderColor: theme.inputBorder,
     borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: 11,
   },
+  inputError: { borderColor: colors.error },
   input: { flex: 1, fontSize: typography.body, color: theme.text, paddingVertical: 0 },
   inputPrefix: { fontSize: typography.body, fontWeight: typography.semibold },
-  textarea: { alignItems: 'flex-start', paddingVertical: spacing.sm, minHeight: 80 },
+  textarea: { alignItems: 'flex-start', paddingVertical: spacing.sm, minHeight: 90 },
+  fieldError: { fontSize: typography.support, color: colors.error, marginTop: 2 },
 
   chipsRow: { gap: spacing.sm, paddingVertical: 2 },
   chip: {
@@ -304,8 +438,7 @@ const styles = (theme) => StyleSheet.create({
   conditionBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
     paddingVertical: 10, borderRadius: radius.sm,
-    borderWidth: 1.5, borderColor: theme.border,
-    backgroundColor: theme.input,
+    borderWidth: 1.5, borderColor: theme.border, backgroundColor: theme.input,
   },
   conditionBtnActive: { borderColor: colors.primary, backgroundColor: theme.pinkLight },
   conditionText: { fontSize: typography.label, color: theme.textMuted, fontWeight: typography.medium },
@@ -314,26 +447,61 @@ const styles = (theme) => StyleSheet.create({
   row: { flexDirection: 'row', gap: spacing.md },
   flex1: { flex: 1 },
 
-  photoArea: { borderRadius: radius.md },
-  photoPlaceholder: {
-    height: 120, borderRadius: radius.md,
-    borderWidth: 2, borderColor: theme.inputBorder, borderStyle: 'dashed',
-    backgroundColor: theme.input, alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+  cepResult: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
+    backgroundColor: theme.pinkLight, borderRadius: radius.xs,
+    paddingHorizontal: spacing.sm, paddingVertical: 6,
   },
-  photoPlaceholderText: { fontSize: typography.label, color: theme.textMuted },
-  photosRow: { flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' },
-  photoItem: { position: 'relative' },
-  photoPreview: { width: 100, height: 100, borderRadius: radius.sm },
+  cepResultText: { fontSize: typography.support, color: colors.primary, flex: 1 },
+
+  photosGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  photoItem: { position: 'relative', marginBottom: spacing.xs },
+  photoPreview: { width: 90, height: 90, borderRadius: radius.sm },
+  photoRejected: { opacity: 0.5, borderWidth: 2, borderColor: colors.error },
+  photoPrimaryBadge: {
+    position: 'absolute', bottom: 4, left: 4,
+    backgroundColor: colors.primary, borderRadius: radius.xs,
+    paddingHorizontal: 5, paddingVertical: 2,
+  },
+  photoPrimaryText: { color: '#fff', fontSize: 9, fontWeight: typography.bold },
+  photoStatusBadge: {
+    position: 'absolute', top: 4, left: 4,
+    backgroundColor: colors.error, borderRadius: radius.xs,
+    flexDirection: 'row', alignItems: 'center', gap: 2,
+    paddingHorizontal: 4, paddingVertical: 2,
+  },
+  photoApprovedBadge: { backgroundColor: colors.success },
+  photoStatusText: { color: '#fff', fontSize: 9, fontWeight: typography.bold },
   removePhoto: {
     position: 'absolute', top: 4, right: 4,
     width: 22, height: 22, borderRadius: 11,
     backgroundColor: 'rgba(0,0,0,0.65)', alignItems: 'center', justifyContent: 'center',
   },
-  addPhotoBtn: {
-    width: 100, height: 100, borderRadius: radius.sm,
-    borderWidth: 2, borderColor: theme.inputBorder, borderStyle: 'dashed',
-    alignItems: 'center', justifyContent: 'center',
+  rejectedReason: {
+    width: 90, fontSize: 9, color: colors.error,
+    marginTop: 2, textAlign: 'center',
   },
+  addPhotoBtn: {
+    width: 90, height: 90, borderRadius: radius.sm,
+    borderWidth: 2, borderColor: theme.inputBorder, borderStyle: 'dashed',
+    alignItems: 'center', justifyContent: 'center', gap: 4,
+  },
+  addPhotoText: { fontSize: 10, color: theme.textMuted },
+
+  analyzeBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    paddingVertical: 12, borderRadius: radius.sm,
+    borderWidth: 1.5, borderColor: colors.primary,
+    backgroundColor: theme.pinkLight,
+  },
+  analyzeBtnText: { color: colors.primary, fontSize: typography.label, fontWeight: typography.bold },
+
+  approvedBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    backgroundColor: colors.successBg, borderWidth: 1, borderColor: colors.successBorder,
+    borderRadius: radius.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm,
+  },
+  approvedBannerText: { color: colors.successText, fontSize: typography.label, fontWeight: typography.semibold },
 
   errorBox: {
     flexDirection: 'row', alignItems: 'center', gap: spacing.xs,
@@ -343,12 +511,12 @@ const styles = (theme) => StyleSheet.create({
   errorText: { color: colors.errorText, fontSize: typography.label, flex: 1 },
 
   submitBtn: {
-    backgroundColor: colors.primary, paddingVertical: 15,
+    backgroundColor: colors.primary, paddingVertical: 16,
     borderRadius: radius.md, flexDirection: 'row',
     alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
     ...shadows.cta,
   },
-  btnDisabled: { opacity: 0.7 },
+  btnDisabled: { opacity: 0.6 },
   submitBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: typography.button },
 
   howCard: {
@@ -367,7 +535,8 @@ const styles = (theme) => StyleSheet.create({
 
   successContainer: {
     flex: 1, backgroundColor: theme.bg,
-    alignItems: 'center', justifyContent: 'center', gap: spacing.md, padding: spacing.xxxl,
+    alignItems: 'center', justifyContent: 'center',
+    gap: spacing.md, padding: spacing.xxxl,
   },
   successIconWrap: {
     width: 100, height: 100, borderRadius: 50,
@@ -381,4 +550,9 @@ const styles = (theme) => StyleSheet.create({
     borderRadius: radius.pill, ...shadows.cta,
   },
   successBtnText: { color: '#fff', fontWeight: typography.bold, fontSize: typography.button },
+  successBtnOutline: {
+    paddingHorizontal: spacing.xxxl, paddingVertical: 12,
+    borderRadius: radius.pill, borderWidth: 1.5, borderColor: colors.primary,
+  },
+  successBtnOutlineText: { color: colors.primary, fontWeight: typography.bold, fontSize: typography.button },
 });

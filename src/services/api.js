@@ -61,6 +61,21 @@ export const productApi = {
   sellerSummary: () => api.get('/api/products/meus'),
 };
 
+export const categoryApi = {
+  list: () => api.get('/api/categorias'),
+};
+
+export const analyzeApi = {
+  analyzeImages: (formData) => api.post('/api/products/analyze-images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+    timeout: 120000,
+  }),
+};
+
+export const cepApi = {
+  lookup: (cep) => axios.get(`https://viacep.com.br/ws/${cep.replace(/\D/g, '')}/json/`, { timeout: 10000 }),
+};
+
 export const checkoutApi = {
   calculateShipping: (productId, cepDestino) => api.post('/api/shipping/calculate', {
     produtoId: productId,
