@@ -21,9 +21,9 @@ const CATEGORIES = [
 ];
 
 const HOW_IT_WORKS = [
-  { num: '1', icon: '📦', title: 'Doe itens', desc: 'Cadastre produtos que seu bebê não usa mais.' },
-  { num: '2', icon: '👨‍👩‍👧', title: 'Encontre famílias', desc: 'Conecte-se com famílias da sua região.' },
-  { num: '3', icon: '💝', title: 'Ajude quem precisa', desc: 'Faça a diferença com um gesto de amor.' },
+  { num: '1', icon: '📦', title: 'Anuncie produtos', desc: 'Publique produtos que você quer vender.' },
+  { num: '2', icon: '🔎', title: 'Encontre ofertas', desc: 'Explore produtos de vendedores da sua região.' },
+  { num: '3', icon: '🛒', title: 'Compre com segurança', desc: 'Escolha seus produtos e acompanhe o pedido.' },
 ];
 
 const PUBLIC_STATUSES = ['ATIVO', 'DISPONIVEL', 'APROVADO'];
@@ -70,20 +70,20 @@ export default function HomeScreen({ onDonate, onProductPress }) {
         <View style={s.heroCircle2} />
         <View style={s.heroLeft}>
           <View style={s.badge}>
-            <Text style={s.badgeText}>DOAÇÕES PARA BEBÊS</Text>
+            <Text style={s.badgeText}>COMPRA E VENDA DE PRODUTOS</Text>
           </View>
           <Text style={s.heroTitle}>
-            Conectando quem doa com{' '}
-            <Text style={s.heroTitleItalic}>quem precisa</Text>
+            Encontre produtos para{' '}
+            <Text style={s.heroTitleItalic}>cada momento</Text>
           </Text>
           <Text style={s.heroSubtitle}>
-            Itens gratuitos de famílias da sua região.
+            Explore ofertas e anuncie seus produtos de forma simples.
           </Text>
           <TouchableOpacity style={s.heroBtn} activeOpacity={0.8} onPress={onDonate}>
-            <Text style={s.heroBtnText}>Quero doar</Text>
+            <Text style={s.heroBtnText}>Anunciar produto</Text>
           </TouchableOpacity>
           <View style={s.features}>
-            {['Gratuito', 'Seguro', 'Solidário'].map((f, i) => (
+            {['Ofertas', 'Seguro', 'Prático'].map((f, i) => (
               <View key={i} style={s.featureChip}>
                 <Text style={s.featureChipText}>✓ {f}</Text>
               </View>
@@ -118,7 +118,7 @@ export default function HomeScreen({ onDonate, onProductPress }) {
 
       {/* Grid de produtos 2 colunas */}
       <View style={s.sectionHeader}>
-        <Text style={s.sectionTitle}>Doações disponíveis</Text>
+        <Text style={s.sectionTitle}>Produtos em destaque</Text>
         <Text style={s.sectionSubtitle}>{filtered.length} itens encontrados</Text>
       </View>
 

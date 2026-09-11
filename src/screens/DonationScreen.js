@@ -8,24 +8,18 @@ import { useTheme } from '../context/ThemeContext';
 import { getApiErrorMessage, productApi } from '../services/api';
 
 const CATEGORIES = [
-  { label: 'Roupas', icon: '👕' },
-  { label: 'Brinquedos', icon: '🧸' },
-  { label: 'Móveis', icon: '🪑' },
-  { label: 'Acessórios', icon: '🎒' },
-  { label: 'Alimentação', icon: '🍼' },
-  { label: 'Outros', icon: '📦' },
+  { label: 'Roupas', icon: '' },
+  { label: 'Brinquedos', icon: '' },
+  { label: 'Móveis', icon: '' },
+  { label: 'Acessórios', icon: '' },
+  { label: 'Alimentação', icon: '' },
+  { label: 'Outros', icon: '' },
 ];
 
 const CONDITIONS = [
-  { label: 'Novo', icon: '✨' },
-  { label: 'Semi-novo', icon: '👍' },
-  { label: 'Usado', icon: '📦' },
-];
-
-const HOW_STEPS = [
-  { num: '1', text: 'Preencha o formulário com os dados do produto' },
-  { num: '2', text: 'Aguarde a aprovação da nossa equipe' },
-  { num: '3', text: 'Interessados entram em contato via WhatsApp' },
+  { label: 'Novo', icon: '' },
+  { label: 'Semi-novo', icon: '' },
+  { label: 'Usado', icon: '' },
 ];
 
 export default function DonationScreen({ onBack, onProductCreated }) {
@@ -96,8 +90,8 @@ export default function DonationScreen({ onBack, onProductCreated }) {
     return (
       <View style={s.successContainer}>
         <Text style={s.successIcon}>✅</Text>
-        <Text style={s.successTitle}>Doação enviada!</Text>
-        <Text style={s.successSubtitle}>Aguarde a aprovação da nossa equipe.</Text>
+        <Text style={s.successTitle}>Anúncio enviado!</Text>
+        <Text style={s.successSubtitle}>Seu produto foi enviado para análise. Aguarde a aprovação da nossa equipe.</Text>
         <TouchableOpacity style={s.successBtn} onPress={onBack} activeOpacity={0.8}>
           <Text style={s.successBtnText}>Voltar para o início</Text>
         </TouchableOpacity>
@@ -110,8 +104,8 @@ export default function DonationScreen({ onBack, onProductCreated }) {
       <ScrollView contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         {/* Card formulário */}
         <View style={s.card}>
-          <Text style={s.cardTitle}>🎁 Fazer uma doação</Text>
-          <Text style={s.cardSubtitle}>Preencha os dados do produto que deseja doar</Text>
+          <Text style={s.cardTitle}> Anunciar Produto</Text>
+          <Text style={s.cardSubtitle}>Preencha os dados do produto que deseja vender</Text>
 
           {/* Grid: Nome + Categoria */}
           <View style={s.row}>
@@ -234,22 +228,10 @@ export default function DonationScreen({ onBack, onProductCreated }) {
             disabled={loading}
             activeOpacity={0.8}
           >
-            <Text style={s.submitBtnText}>{loading ? 'Enviando...' : 'Enviar Doação'}</Text>
+            <Text style={s.submitBtnText}>{loading ? 'Enviando...' : 'Publicar Anúncio'}</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Card como funciona */}
-        <View style={s.howCard}>
-          <Text style={s.howTitle}>Como funciona?</Text>
-          {HOW_STEPS.map((step) => (
-            <View key={step.num} style={s.howStep}>
-              <View style={s.howNum}>
-                <Text style={s.howNumText}>{step.num}</Text>
-              </View>
-              <Text style={s.howStepText}>{step.text}</Text>
-            </View>
-          ))}
-        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -344,23 +326,6 @@ const styles = (theme) => StyleSheet.create({
   submitBtnDisabled: { opacity: 0.7 },
   submitBtnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
   errorText: { color: '#c44150', fontSize: 13, textAlign: 'center' },
-
-  // Card como funciona
-  howCard: {
-    backgroundColor: theme.card, borderRadius: 20, padding: 24,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.07, shadowRadius: 12, elevation: 4,
-    gap: 14,
-  },
-  howTitle: { fontSize: 16, fontWeight: '700', color: theme.text },
-  howStep: { flexDirection: 'row', alignItems: 'flex-start', gap: 12 },
-  howNum: {
-    width: 28, height: 28, borderRadius: 14,
-    backgroundColor: theme.pink, alignItems: 'center', justifyContent: 'center',
-    flexShrink: 0,
-  },
-  howNumText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  howStepText: { flex: 1, fontSize: 13, color: theme.textMuted, lineHeight: 20, paddingTop: 4 },
 
   // Sucesso
   successContainer: {

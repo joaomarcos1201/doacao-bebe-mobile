@@ -7,22 +7,22 @@ import { useTheme } from '../context/ThemeContext';
 const SECTIONS = [
   {
     title: 'Nossa História',
-    text: 'Fundada em 2024, a Além do Positivo nasceu da vontade de conectar famílias que têm itens de bebê em bom estado com famílias que precisam deles. Acreditamos que cada item doado carrega amor e transforma vidas.',
+    text: 'Fundada em 2024, a Além do Positivo nasceu para conectar pessoas que querem vender produtos em bom estado a compradores que buscam boas oportunidades.',
   },
   {
     title: 'Nosso Objetivo',
-    text: 'Criar uma ponte solidária entre doadores e receptores, facilitando o acesso a itens essenciais para bebês de forma gratuita, segura e com respeito à dignidade de todas as famílias.',
+    text: 'Facilitar a compra e a venda de produtos de forma simples, segura e transparente, aproximando vendedores e compradores.',
   },
   {
     title: 'Nossa Visão',
-    text: 'Ser a plataforma de referência em doações de itens infantis no Brasil, construindo uma comunidade solidária onde nenhuma família precise passar por dificuldades sozinha.',
+    text: 'Ser uma plataforma de referência para compra e venda de produtos infantis no Brasil, com uma comunidade confiável e ativa.',
   },
 ];
 
 const HOW_STEPS = [
-  { num: '1', title: 'Doar', desc: 'Cadastre itens que seu bebê não usa mais e ajude outra família.' },
-  { num: '2', title: 'Buscar', desc: 'Encontre itens disponíveis perto de você de forma gratuita.' },
-  { num: '3', title: 'Conectar', desc: 'Entre em contato com o doador e combine a retirada.' },
+  { num: '1', title: 'Anunciar', desc: 'Cadastre produtos, defina o preço e publique seu anúncio.' },
+  { num: '2', title: 'Explorar', desc: 'Encontre produtos e ofertas perto de você.' },
+  { num: '3', title: 'Comprar', desc: 'Finalize o pedido e acompanhe a entrega.' },
 ];
 
 export default function AboutScreen({ onBack, onDonate, onViewProducts }) {
@@ -49,7 +49,7 @@ export default function AboutScreen({ onBack, onDonate, onViewProducts }) {
             <Text style={s.logoEmoji}>🌸</Text>
           </View>
           <Text style={s.heroTitle}>Além do Positivo</Text>
-          <Text style={s.heroSubtitle}>Conectando famílias através da solidariedade</Text>
+          <Text style={s.heroSubtitle}>Compra e venda de produtos de forma simples e segura</Text>
         </View>
 
         {/* Cards de texto */}
@@ -79,7 +79,7 @@ export default function AboutScreen({ onBack, onDonate, onViewProducts }) {
         {/* Botões */}
         <View style={s.buttons}>
           <TouchableOpacity style={s.btnPrimary} onPress={onDonate} activeOpacity={0.8}>
-            <Text style={s.btnPrimaryText}>🎁  Fazer uma Doação</Text>
+            <Text style={s.btnPrimaryText}>📦  Anunciar Produto</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.btnOutline} onPress={onViewProducts} activeOpacity={0.8}>
             <Text style={s.btnOutlineText}>Ver Produtos</Text>
